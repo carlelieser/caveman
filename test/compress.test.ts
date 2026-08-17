@@ -82,6 +82,25 @@ describe('compressText invariants', () => {
     }
   });
 
+  it('keeps a pretty-printed JSON payload parseable at every level', () => {
+    // The braces sit on their own lines, so no brace-delimited pattern covers
+    // the key-value lines between them.
+    const payload = JSON.stringify(
+      {
+        idempotency_key: 'cart-7731-a',
+        status: 'a pending order',
+        has_more: false,
+        items: [{ sku: 'the-classic-mug', qty: 2 }],
+      },
+      null,
+      2,
+    );
+    for (const level of LEVELS) {
+      expect(() => JSON.parse(compress(payload, level))).not.toThrow();
+      expect(JSON.parse(compress(payload, level))).toEqual(JSON.parse(payload));
+    }
+  });
+
   it('empties a block of nothing but removable words', () => {
     // What the pipeline does with an empty block is tested there, not here.
     expect(compress('to the', 'moderate')).toBe('');

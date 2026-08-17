@@ -133,6 +133,10 @@ const INLINE_PATTERNS: readonly RegExp[] = [
   // JSON or JS object/array literals, one nesting level of braces.
   /\{[^{}\n]*[:,][^{}\n]*\}/gu,
   /\[[^[\]\n]*[:,"][^[\]\n]*\]/gu,
+  // One line of a pretty-printed object, whose braces sit on other lines.
+  /^[ \t]*"(?:[^"\\\n]|\\.)*"[ \t]*:.*$/gmu,
+  // A double-quoted string anywhere else; its contents are read back verbatim.
+  /"(?:[^"\\\n]|\\.)*"/gu,
   // XML and JSX elements.
   /<\/?[A-Za-z][A-Za-z0-9.:-]*(?:\s[^<>]*)?\/?>/gu,
   // Stack frame fragments appearing mid-line.

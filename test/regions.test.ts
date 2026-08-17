@@ -160,6 +160,26 @@ describe('classifyRegions protection', () => {
       text: 'call compute(a, b) now',
       needle: 'compute(a, b)',
     },
+    {
+      name: 'one line of a pretty-printed object',
+      text: '{\n  "idempotency_key": "cart-7731-a",\n}',
+      needle: '"idempotency_key": "cart-7731-a",',
+    },
+    {
+      name: 'a string value holding words',
+      text: '{\n  "status": "a pending order",\n}',
+      needle: '"status": "a pending order",',
+    },
+    {
+      name: 'a boolean value',
+      text: '{\n  "has_more": false\n}',
+      needle: '"has_more": false',
+    },
+    {
+      name: 'a quoted string in prose',
+      text: 'she said "the very large dog" loudly',
+      needle: '"the very large dog"',
+    },
   ];
 
   for (const { name, text, needle } of cases) {
