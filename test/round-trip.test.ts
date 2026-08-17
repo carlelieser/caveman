@@ -28,6 +28,20 @@ describe('anthropic adapter round-trip identity', () => {
   });
 });
 
+/**
+ * Prompt cache lookup matches on the serialized request prefix, so a body that
+ * is structurally equal but serializes to different bytes misses the cache and
+ * re-writes every cached segment. `toEqual` ignores key order and cannot see
+ * this; only string equality can.
+ */
+describe('anthropic adapter serialization is byte-stable', () => {
+  for (const fixture of REQUEST_FIXTURES) {
+    it(`re-serializes ${fixture.name} to identical bytes`, () => {
+      expect(JSON.stringify(roundTrip(fixture.body))).toBe(JSON.stringify(fixture.body));
+    });
+  }
+});
+
 describe('absent optional fields stay absent', () => {
   it('omits system when the request had none', () => {
     const body = {

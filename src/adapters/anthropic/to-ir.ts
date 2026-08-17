@@ -28,6 +28,7 @@ function toTextContent(block: Record<string, unknown>): IrContent {
     kind: 'text',
     text: String(block['text'] ?? ''),
     compressible: true,
+    keyOrder: Object.keys(block),
   };
   if ('cache_control' in block) content.cacheControl = block['cache_control'];
   const rest = extractPassthrough(block, MODELLED_TEXT_KEYS);
@@ -41,6 +42,7 @@ function toToolUseContent(block: Record<string, unknown>): IrContent {
     id: String(block['id'] ?? ''),
     name: String(block['name'] ?? ''),
     input: block['input'],
+    keyOrder: Object.keys(block),
   };
   if ('cache_control' in block) content.cacheControl = block['cache_control'];
   const rest = extractPassthrough(block, MODELLED_TOOL_USE_KEYS);
@@ -56,6 +58,7 @@ function toToolResultContent(block: Record<string, unknown>): IrContent {
     toolUseId: String(block['tool_use_id'] ?? ''),
     content: toContentArray(raw),
     isContentString,
+    keyOrder: Object.keys(block),
   };
   if ('is_error' in block) content.isError = block['is_error'] === true;
   if ('cache_control' in block) content.cacheControl = block['cache_control'];
@@ -102,6 +105,7 @@ function toMessage(raw: unknown): IrMessage {
     role: raw['role'] as IrRole,
     content: toContentArray(content),
     isContentString: typeof content === 'string',
+    keyOrder: Object.keys(raw),
   };
   const rest = extractPassthrough(raw, MODELLED_MESSAGE_KEYS);
   if (rest !== undefined) message.passthrough = rest;
@@ -153,7 +157,7 @@ function modelledRequestKeys(body: AnthropicRequestBody): readonly string[] {
 export function toIR(body: AnthropicRequestBody): IrRequest {
   const { system, isSystemString } = toSystem(body['system']);
   const messages = Array.isArray(body['messages']) ? body['messages'] : [];
-  const extensions: ProviderExtensions = {};
+  const extensions: ProviderExtensions = { keyOrder: Object.keys(body) };
   if (isSystemString) extensions.isSystemString = true;
   return {
     model: String(body['model'] ?? ''),

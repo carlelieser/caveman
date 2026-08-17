@@ -351,6 +351,63 @@ const messageLevelUnknownKey: RequestFixture = {
   },
 };
 
+/**
+ * The key order and cache_control placement a Claude Code turn arrives in,
+ * reproduced from a captured request with synthetic content. `max_tokens`
+ * lands after `metadata` rather than second, which is what makes this fixture
+ * catch a re-serialization that reorders top-level keys.
+ */
+const clientKeyOrder: RequestFixture = {
+  name: 'client key order with cached prefix',
+  body: {
+    model: 'claude-opus-4-1',
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'A system reminder block.' },
+          { type: 'text', text: 'The user turn itself.' },
+        ],
+      },
+      {
+        role: 'system',
+        content: [
+          {
+            type: 'text',
+            text: 'A mid-conversation system block.',
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+      },
+    ],
+    system: [
+      { type: 'text', text: 'You are Claude Code.' },
+      {
+        type: 'text',
+        text: 'Short stable preamble.',
+        cache_control: { type: 'ephemeral' },
+      },
+      {
+        type: 'text',
+        text: 'The long stable environment block.',
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    tools: [
+      {
+        name: 'Bash',
+        description: 'Executes a bash command.',
+        input_schema: { type: 'object', properties: { command: { type: 'string' } } },
+      },
+    ],
+    metadata: { user_id: 'user_placeholder' },
+    max_tokens: 64000,
+    thinking: { type: 'disabled' },
+    output_config: { effort: 'high' },
+    stream: true,
+  },
+};
+
 export const REQUEST_FIXTURES: readonly RequestFixture[] = [
   plainText,
   stringSystem,
@@ -368,4 +425,5 @@ export const REQUEST_FIXTURES: readonly RequestFixture[] = [
   serverAndCustomTools,
   emptyToolsArray,
   messageLevelUnknownKey,
+  clientKeyOrder,
 ];

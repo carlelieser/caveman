@@ -60,6 +60,30 @@ export function applyPassthrough(
 }
 
 /**
+ * Re-emits a rebuilt wire object in the key order it arrived in. JSON key order
+ * is insertion order, and prompt cache lookup matches on serialized bytes, so a
+ * body reassembled in declaration order misses the cache despite being equal.
+ *
+ * Keys recorded but no longer present are skipped — a field the IR dropped must
+ * not reappear as `undefined`. Keys present but never recorded are appended, so
+ * a synthesized field still survives.
+ */
+export function inKeyOrder(
+  built: Record<string, unknown>,
+  keyOrder: readonly string[] | undefined,
+): Record<string, unknown> {
+  if (keyOrder === undefined) return built;
+  const ordered: Record<string, unknown> = {};
+  for (const key of keyOrder) {
+    if (key in built) ordered[key] = built[key];
+  }
+  for (const [key, value] of Object.entries(built)) {
+    if (!(key in ordered)) ordered[key] = value;
+  }
+  return ordered;
+}
+
+/**
  * Assigns `value` under `key` only when it is present, so an optional field
  * absent on the way in never reappears as an explicit `undefined`.
  */

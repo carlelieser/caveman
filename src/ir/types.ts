@@ -6,12 +6,20 @@ export type IrRole = 'user' | 'assistant' | 'system';
  */
 export type BlockPassthrough = Record<string, unknown>;
 
+/**
+ * Key order of one wire object, recorded so it can be rebuilt byte-for-byte.
+ * Carried separately from the values because the IR models some keys as named
+ * fields and leaves the rest in passthrough.
+ */
+export type KeyOrder = readonly string[];
+
 export type IrTextContent = {
   kind: 'text';
   text: string;
   compressible: true;
   cacheControl?: unknown;
   passthrough?: BlockPassthrough;
+  keyOrder?: KeyOrder;
 };
 
 export type IrToolResultContent = {
@@ -23,6 +31,7 @@ export type IrToolResultContent = {
   isError?: boolean;
   cacheControl?: unknown;
   passthrough?: BlockPassthrough;
+  keyOrder?: KeyOrder;
 };
 
 export type IrToolUseContent = {
@@ -32,6 +41,7 @@ export type IrToolUseContent = {
   input: unknown;
   cacheControl?: unknown;
   passthrough?: BlockPassthrough;
+  keyOrder?: KeyOrder;
 };
 
 export type IrThinkingContent = {
@@ -61,6 +71,7 @@ export type IrMessage = {
    */
   isContentString?: boolean;
   passthrough?: BlockPassthrough;
+  keyOrder?: KeyOrder;
 };
 
 /** Tool definitions are never inspected or mutated; they round-trip verbatim. */
@@ -76,6 +87,12 @@ export type IrTool = {
 export type ProviderExtensions = {
   /** `system` arrived as a bare string rather than an array of text blocks. */
   isSystemString?: boolean;
+  /**
+   * Top-level key order as it arrived. Prompt cache lookup matches on the
+   * serialized prefix, so a body rebuilt in a different order misses the cache
+   * even though it carries identical content.
+   */
+  keyOrder?: KeyOrder;
 };
 
 export type IrRequest = {

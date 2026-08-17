@@ -7,12 +7,12 @@ import type {
   IrToolUseContent,
 } from '../../ir/types.js';
 import type { AnthropicRequestBody } from './to-ir.js';
-import { applyPassthrough, assignIfPresent } from './passthrough.js';
+import { applyPassthrough, assignIfPresent, inKeyOrder } from './passthrough.js';
 
 function fromTextContent(block: IrTextContent): Record<string, unknown> {
   const wire: Record<string, unknown> = { type: 'text', text: block.text };
   assignIfPresent(wire, 'cache_control', block.cacheControl);
-  return applyPassthrough(wire, block.passthrough);
+  return inKeyOrder(applyPassthrough(wire, block.passthrough), block.keyOrder);
 }
 
 function fromToolUseContent(block: IrToolUseContent): Record<string, unknown> {
@@ -23,7 +23,7 @@ function fromToolUseContent(block: IrToolUseContent): Record<string, unknown> {
     input: block.input,
   };
   assignIfPresent(wire, 'cache_control', block.cacheControl);
-  return applyPassthrough(wire, block.passthrough);
+  return inKeyOrder(applyPassthrough(wire, block.passthrough), block.keyOrder);
 }
 
 function fromToolResultContent(block: IrToolResultContent): Record<string, unknown> {
@@ -38,7 +38,7 @@ function fromToolResultContent(block: IrToolResultContent): Record<string, unkno
   );
   assignIfPresent(wire, 'is_error', block.isError);
   assignIfPresent(wire, 'cache_control', block.cacheControl);
-  return applyPassthrough(wire, block.passthrough);
+  return inKeyOrder(applyPassthrough(wire, block.passthrough), block.keyOrder);
 }
 
 function fromContentBlock(block: IrContent): unknown {
@@ -64,7 +64,7 @@ function fromMessage(message: IrMessage): Record<string, unknown> {
   const wire: Record<string, unknown> = { role: message.role };
   const content = fromContentField(message.content, message.isContentString);
   wire['content'] = content === undefined ? [] : content;
-  return applyPassthrough(wire, message.passthrough);
+  return inKeyOrder(applyPassthrough(wire, message.passthrough), message.keyOrder);
 }
 
 function fromSystem(request: IrRequest): unknown {
@@ -89,5 +89,8 @@ export function fromIR(request: IrRequest): AnthropicRequestBody {
   assignIfPresent(body, 'system', fromSystem(request));
   body['messages'] = request.messages.map(fromMessage);
   if (request.tools.length > 0) body['tools'] = request.tools.map((tool) => tool.raw);
-  return applyPassthrough(body, request.passthrough);
+  return inKeyOrder(
+    applyPassthrough(body, request.passthrough),
+    request.extensions.keyOrder,
+  );
 }
