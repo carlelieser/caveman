@@ -94,10 +94,26 @@ export function forwardableResponseHeaders(incoming: Headers): Headers {
 export type UpstreamRequest = {
   adapter: ProviderAdapter;
   headers: Headers;
+  originalHeaders?: Headers;
   body: string;
+  signal?: AbortSignal;
 };
 
+/**
+ * An adapter without a transport is an HTTP host, which is the common case and
+ * stays on the fetch path. One with a transport owns the trip upstream.
+ */
 export async function sendUpstream(request: UpstreamRequest): Promise<Response> {
+  const transport = request.adapter.transport;
+  if (transport !== undefined) {
+    return transport({
+      body: request.body,
+      headers: request.headers,
+      originalHeaders: request.originalHeaders ?? request.headers,
+      signal: request.signal ?? new AbortController().signal,
+    });
+  }
+
   const url = `${upstreamBaseUrl(request.adapter)}${request.adapter.path}`;
   try {
     return await fetch(url, {

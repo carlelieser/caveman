@@ -100,8 +100,12 @@ async function forwardMessages(context: Context, route: Route): Promise<Response
 
   const upstream = await sendUpstream({
     adapter: route.adapter,
+    // The Caveman headers are stripped from what goes upstream, so the adapter
+    // reads its own from the original request.
     headers: forwardableRequestHeaders(context.req.raw.headers),
+    originalHeaders: context.req.raw.headers,
     body: JSON.stringify(route.adapter.fromIR(staged.request)),
+    signal: context.req.raw.signal,
   });
   return passthroughResponse(upstream, accountingDecorator(staged.stats));
 }
