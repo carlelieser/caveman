@@ -12,6 +12,7 @@ const NEVER_REMOVABLE: readonly WordClass[] = [
   'verb',
   'number',
   'proper',
+  'predicate',
   'other',
 ];
 

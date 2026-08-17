@@ -10,6 +10,8 @@ export type WordClass =
   | 'pronoun'
   | 'adverb'
   | 'adjective'
+  /** An adjective carrying its clause's assertion, as in `connection refused`. */
+  | 'predicate'
   | 'noun'
   | 'verb'
   | 'number'
@@ -22,6 +24,12 @@ export type ClassifiedWord = {
   end: number;
   wordClass: WordClass;
 };
+
+const VERB_TAG = 'Verb';
+const ADJECTIVE_TAG = 'Adjective';
+
+/** Added by `markPredicates`; compromise never emits it. */
+const PREDICATE_TAG = 'CavemanPredicate';
 
 /**
  * Compromise's tags, mapped in priority order. Order is what makes the mapping
@@ -49,6 +57,7 @@ const TAG_PRIORITY: readonly (readonly [string, WordClass])[] = [
   ['Preposition', 'preposition'],
   ['Conjunction', 'conjunction'],
   ['Adverb', 'adverb'],
+  [PREDICATE_TAG, 'predicate'],
   ['Adjective', 'adjective'],
   ['Verb', 'verb'],
   ['Noun', 'noun'],
@@ -130,10 +139,35 @@ function mergeTaglessTerms(terms: readonly Term[]): Term[] {
   return merged;
 }
 
+/**
+ * Compromise tags a past participle `Adjective`, which is right for `an
+ * abandoned building` and wrong for `50 requests abandoned`, where the
+ * participle is the whole predication and the copula has been left out. A
+ * sentence carrying no verb has nothing else to predicate with, so an adjective
+ * in one is holding the assertion rather than describing a noun.
+ */
+function markPredicates(terms: readonly Term[]): Term[] {
+  if (terms.some((term) => term.tags.includes(VERB_TAG))) return [...terms];
+  return terms.map((term, index) =>
+    term.tags.includes(ADJECTIVE_TAG) && followsANoun(terms, index)
+      ? { ...term, tags: [...term.tags, PREDICATE_TAG] }
+      : term,
+  );
+}
+
+/**
+ * An attributive adjective precedes what it describes and a predicative one
+ * follows its subject, which is the only thing separating `a very large dog`
+ * from `connection refused` once neither has a verb.
+ */
+function followsANoun(terms: readonly Term[], index: number): boolean {
+  return terms.slice(0, index).some((term) => classOf(term.tags) === 'noun');
+}
+
 function parseTerms(text: string): Term[] {
   const sentences = nlp(text).json({ terms: { tags: true } }) as SentenceJson[];
-  return mergeTaglessTerms(
-    sentences.flatMap((sentence) => (sentence.terms ?? []).map(toTerm)),
+  return sentences.flatMap((sentence) =>
+    markPredicates(mergeTaglessTerms((sentence.terms ?? []).map(toTerm))),
   );
 }
 

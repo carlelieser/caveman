@@ -190,6 +190,22 @@ describe('compressText grammatical selection', () => {
     }
   });
 
+  it('keeps an adjective that carries its clause, at every level', () => {
+    const cases = ['50 requests abandoned', 'the build failed', 'job cancelled'];
+    for (const text of cases) {
+      for (const level of LEVELS) {
+        expect(compress(text, level)).toMatch(/(abandoned|failed|cancelled)$/u);
+      }
+    }
+  });
+
+  it('still drops an adjective when the clause has a verb of its own', () => {
+    expect(compress('an abandoned building was sold', 'caveman')).toBe('building sold');
+    expect(compress('The very large dog quickly ate the food.', 'caveman')).toBe(
+      'dog ate food.',
+    );
+  });
+
   it('keeps nouns, verbs, numbers and proper nouns at every level', () => {
     const text = 'John quickly sent the 42 large reports to Paris on Tuesday.';
     for (const level of LEVELS) {

@@ -149,6 +149,20 @@ describe('classifyWords classes', () => {
     expect(classOf("I haven't tried.", "haven't")).toBe('other');
   });
 
+  it('tags a participle as a predicate when its sentence has no verb', () => {
+    expect(classOf('50 requests abandoned', 'abandoned')).toBe('predicate');
+    expect(classOf('the build failed', 'failed')).toBe('predicate');
+  });
+
+  it('tags the same participle as an adjective when the sentence has a verb', () => {
+    expect(classOf('an abandoned building was sold', 'abandoned')).toBe('adjective');
+  });
+
+  it('tags an adjective before its noun as an adjective, verb or not', () => {
+    expect(classOf('a very large dog', 'large')).toBe('adjective');
+    expect(classOf('the broken pipe', 'broken')).toBe('adjective');
+  });
+
   it('still tags an uncontracted auxiliary as an auxiliary', () => {
     expect(classOf('It does work.', 'does')).toBe('auxiliary');
     expect(classOf('I have tried.', 'have')).toBe('auxiliary');
