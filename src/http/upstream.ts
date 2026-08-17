@@ -96,6 +96,8 @@ export type UpstreamRequest = {
   headers: Headers;
   originalHeaders?: Headers;
   body: string;
+  /** The incoming query string, including its leading `?`, when there was one. */
+  search?: string;
   signal?: AbortSignal;
 };
 
@@ -114,7 +116,7 @@ export async function sendUpstream(request: UpstreamRequest): Promise<Response> 
     });
   }
 
-  const url = `${upstreamBaseUrl(request.adapter)}${request.adapter.path}`;
+  const url = `${upstreamBaseUrl(request.adapter)}${request.adapter.path}${request.search ?? ''}`;
   try {
     return await fetch(url, {
       method: 'POST',

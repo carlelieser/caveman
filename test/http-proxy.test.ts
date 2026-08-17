@@ -61,11 +61,33 @@ describe('transparency', () => {
     expect(received).toEqual(SAMPLE_BODY);
   });
 
+  /**
+   * Deep equality is not enough: the prompt cache matches on serialized bytes,
+   * so a body forwarded with reordered keys misses the cache and re-bills every
+   * cached segment even though its content is identical.
+   */
+  it('forwards a byte-identical body when no Caveman headers are set', async () => {
+    await app.fetch(proxyRequest({ 'x-api-key': 'sk-test' }, SAMPLE_BODY));
+
+    expect(upstream.requests[0]!.body).toBe(JSON.stringify(SAMPLE_BODY));
+  });
+
   it('forwards to the /v1/messages path with POST', async () => {
     await app.fetch(proxyRequest({}, SAMPLE_BODY));
 
     expect(upstream.requests[0]!.url).toBe('/v1/messages');
     expect(upstream.requests[0]!.method).toBe('POST');
+  });
+
+  it('forwards the client’s query string rather than dropping it', async () => {
+    const request = new Request('http://caveman.test/v1/messages?beta=true', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(SAMPLE_BODY),
+    });
+    await app.fetch(request);
+
+    expect(upstream.requests[0]!.url).toBe('/v1/messages?beta=true');
   });
 
   it('forwards a body deep-equal when Caveman headers request no compression', async () => {

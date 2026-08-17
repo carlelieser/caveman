@@ -76,6 +76,18 @@ async function readBody(context: Context, route: Route): Promise<ProviderRequest
   return parseBody(await context.req.text(), route.adapter.path);
 }
 
+/**
+ * The client's query string, forwarded so upstream sees the request it was
+ * addressed to. An unparseable URL yields none rather than failing the request.
+ */
+function incomingSearch(url: string): string {
+  try {
+    return new URL(url).search;
+  } catch {
+    return '';
+  }
+}
+
 async function forwardMessages(context: Context, route: Route): Promise<Response> {
   const policyResult = parseCompressionPolicy(context.req.raw.headers);
   if (!policyResult.ok) {
@@ -105,6 +117,7 @@ async function forwardMessages(context: Context, route: Route): Promise<Response
     headers: forwardableRequestHeaders(context.req.raw.headers),
     originalHeaders: context.req.raw.headers,
     body: JSON.stringify(route.adapter.fromIR(staged.request)),
+    search: incomingSearch(context.req.raw.url),
     signal: context.req.raw.signal,
   });
   return passthroughResponse(upstream, accountingDecorator(staged.stats));
