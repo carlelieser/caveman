@@ -191,3 +191,73 @@ describe('pipeline structural validity', () => {
     expect(systemOnly.stats.nodesSeen).toBe(1);
   });
 });
+
+/**
+ * A cached prefix is matched on its serialized bytes, so compressing anything
+ * inside it trades a small saving for re-billing the entire cached segment.
+ */
+describe('cached prefixes are never compressed', () => {
+  const cachedBody = {
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    system: [
+      { type: 'text', text: 'A long stable preamble that would compress well.' },
+      {
+        type: 'text',
+        text: 'The final stable system block, marked as the cache breakpoint.',
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'An earlier turn that sits inside the cached prefix region.',
+          },
+        ],
+      },
+    ],
+  };
+
+  it('leaves the block carrying cache_control untouched', () => {
+    const result = compress(toIR(cachedBody), 0.5);
+    const system = fromIR(result.request)['system'] as Record<string, unknown>[];
+    expect(system[1]?.['text']).toBe(cachedBody.system[1]?.text);
+  });
+
+  it('leaves blocks before the breakpoint untouched', () => {
+    const result = compress(toIR(cachedBody), 0.5);
+    const system = fromIR(result.request)['system'] as Record<string, unknown>[];
+    expect(system[0]?.['text']).toBe(cachedBody.system[0]?.text);
+  });
+
+  it('counts skipped nodes so accounting stays honest', () => {
+    const result = compress(toIR(cachedBody), 0.5);
+    // Both system blocks precede the breakpoint; the message follows it.
+    expect(result.stats.nodesSkipped).toBe(2);
+    expect(result.stats.nodesSeen).toBe(3);
+  });
+
+  it('still compresses text after the last breakpoint', () => {
+    const result = compress(toIR(cachedBody), 0.5);
+    const messages = fromIR(result.request)['messages'] as Record<string, unknown>[];
+    const blocks = messages[0]?.['content'] as Record<string, unknown>[];
+    expect(blocks[0]?.['text']).not.toBe(cachedBody.messages[0]?.content[0]?.text);
+  });
+
+  it('compresses everything when no block is cached', () => {
+    const uncached = structuredClone(cachedBody);
+    delete (uncached.system[1] as Record<string, unknown>)['cache_control'];
+    const result = compress(toIR(uncached), 0.5);
+    expect(result.stats.nodesSkipped).toBe(0);
+    expect(result.stats.nodesCompressed).toBeGreaterThan(0);
+  });
+
+  it('keeps the cached prefix byte-identical through a full round-trip', () => {
+    const result = compress(toIR(cachedBody), 0.5);
+    const emitted = fromIR(result.request);
+    expect(JSON.stringify(emitted['system'])).toBe(JSON.stringify(cachedBody.system));
+  });
+});

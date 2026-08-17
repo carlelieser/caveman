@@ -1,7 +1,7 @@
 import type { IrRequest } from '../ir/types.js';
 import type { TextNode, WalkScope } from '../ir/walk.js';
 import type { ScoreContext, ScoreKind, ScoreRole, Scorer } from './scorer.js';
-import { mapTextNodes } from '../ir/walk.js';
+import { collectTextNodes, mapTextNodes } from '../ir/walk.js';
 import { compressText } from './compress.js';
 
 export type PipelineStats = {
@@ -9,6 +9,8 @@ export type PipelineStats = {
   ratio: number;
   nodesSeen: number;
   nodesCompressed: number;
+  /** In-scope nodes left untouched to keep a cached prefix byte-stable. */
+  nodesSkipped: number;
   charsBefore: number;
   charsAfter: number;
 };
@@ -42,12 +44,40 @@ function scoreContextOf(node: TextNode): ScoreContext {
 type Tally = {
   nodesSeen: number;
   nodesCompressed: number;
+  nodesSkipped: number;
   charsBefore: number;
   charsAfter: number;
 };
 
 function newTally(): Tally {
-  return { nodesSeen: 0, nodesCompressed: 0, charsBefore: 0, charsAfter: 0 };
+  return {
+    nodesSeen: 0,
+    nodesCompressed: 0,
+    nodesSkipped: 0,
+    charsBefore: 0,
+    charsAfter: 0,
+  };
+}
+
+/**
+ * Index of the last node carrying `cache_control`, or -1 when none does.
+ * Everything up to and including that node is part of a cached prefix.
+ */
+function lastCacheBreakpoint(nodes: readonly TextNode[]): number {
+  let last = -1;
+  nodes.forEach((node, index) => {
+    if (node.hasCacheControl) last = index;
+  });
+  return last;
+}
+
+/** A node inside the cached prefix is returned verbatim, but still counted. */
+function skipNode(node: TextNode, tally: Tally): string {
+  tally.nodesSeen += 1;
+  tally.nodesSkipped += 1;
+  tally.charsBefore += node.text.length;
+  tally.charsAfter += node.text.length;
+  return node.text;
 }
 
 function compressNode(node: TextNode, request: PipelineRequest, tally: Tally): string {
@@ -71,12 +101,23 @@ function compressNode(node: TextNode, request: PipelineRequest, tally: Tally): s
  * still walked so the stats describe the same nodes a compressed run would
  * touch, which is what makes an off-by-default request comparable to a
  * compressed one.
+ *
+ * Text at or before the last `cache_control` breakpoint is left untouched.
+ * Rewriting it would change the bytes the prompt cache matches on, so the whole
+ * cached prefix — typically far larger than anything compression saves — would
+ * be re-billed as a fresh write on every turn.
  */
 export function runPipeline(request: PipelineRequest): PipelineResult {
   const tally = newTally();
-  const compressed = mapTextNodes(request.request, request.scopes, (node) =>
-    compressNode(node, request, tally),
+  const cachedThrough = lastCacheBreakpoint(
+    collectTextNodes(request.request, request.scopes),
   );
+  let index = -1;
+  const compressed = mapTextNodes(request.request, request.scopes, (node) => {
+    index += 1;
+    if (index <= cachedThrough) return skipNode(node, tally);
+    return compressNode(node, request, tally);
+  });
   return {
     request: compressed,
     stats: {
@@ -84,6 +125,7 @@ export function runPipeline(request: PipelineRequest): PipelineResult {
       ratio: request.ratio,
       nodesSeen: tally.nodesSeen,
       nodesCompressed: tally.nodesCompressed,
+      nodesSkipped: tally.nodesSkipped,
       charsBefore: tally.charsBefore,
       charsAfter: tally.charsAfter,
     },

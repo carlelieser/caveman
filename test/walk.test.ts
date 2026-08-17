@@ -211,3 +211,21 @@ describe('string-form content survives mapping', () => {
     expect(blocks[0]?.['content']).toBe('mapped');
   });
 });
+
+/**
+ * The pipeline finds the cache breakpoint with `collectTextNodes` and then acts
+ * on it while walking with `mapTextNodes`, matching the two by position. That
+ * only works while both visit the same nodes in the same order.
+ */
+describe('collect and map agree on node order', () => {
+  it('visits identical nodes in identical order', () => {
+    const request = toIR(BODY);
+    const collected = collectTextNodes(request, ALL_SCOPES).map((node) => node.text);
+    const mapped: string[] = [];
+    mapTextNodes(request, ALL_SCOPES, (node) => {
+      mapped.push(node.text);
+      return node.text;
+    });
+    expect(mapped).toEqual(collected);
+  });
+});
