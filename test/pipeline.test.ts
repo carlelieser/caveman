@@ -194,6 +194,44 @@ describe('pipeline structural validity', () => {
   });
 });
 
+describe('a node compression would empty keeps its text', () => {
+  function nodeWith(text: string): IrRequest {
+    return {
+      model: 'claude-sonnet-4-5',
+      maxTokens: 1024,
+      system: null,
+      messages: [{ role: 'user', content: [{ kind: 'text', text, compressible: true }] }],
+      tools: [],
+      extensions: {},
+      passthrough: {},
+    };
+  }
+
+  function textOf(result: ReturnType<typeof compress>): string {
+    const content = result.request.messages[0]?.content[0];
+    return content !== undefined && content.kind === 'text' ? content.text : '';
+  }
+
+  it('returns the original text rather than an empty block', () => {
+    for (const level of LEVELS) {
+      expect(textOf(compress(nodeWith('the the the'), level))).toBe('the the the');
+      expect(textOf(compress(nodeWith('to the'), 'moderate'))).toBe('to the');
+    }
+  });
+
+  it('counts the node as seen but not as compressed', () => {
+    const result = compress(nodeWith('the the the'), 'caveman');
+    expect(result.stats.nodesSeen).toBe(1);
+    expect(result.stats.nodesCompressed).toBe(0);
+    expect(result.stats.charsAfter).toBe('the the the'.length);
+  });
+
+  it('leaves a node with any content alone', () => {
+    const text = 'The man went to the store.';
+    expect(textOf(compress(nodeWith(text), 'caveman'))).not.toBe(text);
+  });
+});
+
 /**
  * A cached prefix is matched on its serialized bytes, so compressing anything
  * inside it trades a small saving for re-billing the entire cached segment.

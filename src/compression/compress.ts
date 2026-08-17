@@ -222,10 +222,9 @@ function stripLeadingPunctuation(gap: string): string {
   return gap.replace(LEADING_PUNCTUATION_PATTERN, '');
 }
 
+/** Removal can only shorten text, so a longer candidate is an assembly fault. */
 function isDegenerate(candidate: string, original: string): boolean {
-  const hasLostAllContent =
-    WHITESPACE_ONLY_PATTERN.test(candidate) && !WHITESPACE_ONLY_PATTERN.test(original);
-  return hasLostAllContent || candidate.length > original.length;
+  return candidate.length > original.length;
 }
 
 function buildUnits(
@@ -310,10 +309,8 @@ function buildResult(
  * copied through byte-identically; only words inside prose are classified, and
  * only the classes the level names are removed.
  *
- * Invariants are enforced here rather than assumed: output never grows, a
- * result that lost all content falls back to the original, and a block whose
- * every word is removable is returned unchanged — under class removal that is
- * a real case ("to the"), and the API rejects an empty text block.
+ * A block of nothing but removable words compresses to nothing. Whether an
+ * empty block can go on the wire is `runPipeline`'s question, not this one's.
  */
 export function compressText(request: CompressRequest): CompressionResult {
   const regions = classifyRegions(request.text);
@@ -325,7 +322,7 @@ export function compressText(request: CompressRequest): CompressionResult {
   }
 
   const dropped = selectDropped(units, words, request.level);
-  if (dropped.size === 0 || dropped.size === wordsIn) {
+  if (dropped.size === 0) {
     return identityResult(request.text, wordsIn);
   }
 

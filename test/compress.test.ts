@@ -48,21 +48,12 @@ describe('compressText invariants', () => {
     }
   });
 
-  /**
-   * Levels nest, so a rising level can only remove more — except where the
-   * higher level would remove every word in the block and the empty-block guard
-   * returns the original instead. That fallback is the one case where output
-   * grows with the level, and it is the safety rule winning over the saving.
-   */
-  it('never yields longer output as the level rises, unless the guard fired', () => {
+  /** `REMOVABLE` nests, so a rising level removes a superset of the classes. */
+  it('never yields longer output as the level rises', () => {
     for (const sample of SAMPLES) {
-      const results = LEVELS.map((level) => compressText(requestFor(sample, level)));
-      for (let index = 1; index < results.length; index += 1) {
-        const current = results[index];
-        const previous = results[index - 1];
-        if (current === undefined || previous === undefined) continue;
-        if (current.stats.isUncompressed) continue;
-        expect(current.text.length).toBeLessThanOrEqual(previous.text.length);
+      const lengths = LEVELS.map((level) => compress(sample, level).length);
+      for (let index = 1; index < lengths.length; index += 1) {
+        expect(lengths[index] ?? 0).toBeLessThanOrEqual(lengths[index - 1] ?? 0);
       }
     }
   });
@@ -75,7 +66,8 @@ describe('compressText invariants', () => {
     }
   });
 
-  it('never produces whitespace-only output from non-empty input', () => {
+  it('keeps content in any block that has some', () => {
+    // Every sample carries a noun or a verb, so no level can empty one.
     for (const sample of SAMPLES) {
       for (const level of LEVELS) {
         expect(compress(sample, level).trim()).not.toBe('');
@@ -90,15 +82,10 @@ describe('compressText invariants', () => {
     }
   });
 
-  it('returns a block of only removable words unchanged', () => {
-    // At moderate and above every word here is removable, so removing the class
-    // would empty the block; the API rejects an empty text block. At light only
-    // the determiner goes, which is an ordinary compression.
-    for (const level of ['moderate', 'caveman'] as const) {
-      expect(compress('to the', level)).toBe('to the');
-      expect(compress('of the', level)).toBe('of the');
-    }
-    expect(compress('the the the', 'light')).toBe('the the the');
+  it('empties a block of nothing but removable words', () => {
+    // What the pipeline does with an empty block is tested there, not here.
+    expect(compress('to the', 'moderate')).toBe('');
+    expect(compress('the the the', 'light')).toBe('');
   });
 
   it('actually drops content at every level', () => {

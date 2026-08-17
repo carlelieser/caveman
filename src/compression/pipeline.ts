@@ -78,19 +78,28 @@ function skipNode(node: TextNode, tally: Tally): string {
   return node.text;
 }
 
+const WHITESPACE_ONLY_PATTERN = /^\s*$/u;
+
+/** The API rejects an empty text block, so an emptied node keeps its text. */
+function hasEmptied(before: string, after: string): boolean {
+  return WHITESPACE_ONLY_PATTERN.test(after) && !WHITESPACE_ONLY_PATTERN.test(before);
+}
+
 function compressNode(node: TextNode, request: PipelineRequest, tally: Tally): string {
   const result = compressText({
     text: node.text,
     level: request.level,
     context: contextOf(node),
   });
+  const emptied = hasEmptied(node.text, result.text);
+  const text = emptied ? node.text : result.text;
   tally.nodesSeen += 1;
   tally.charsBefore += result.stats.charsIn;
-  tally.charsAfter += result.stats.charsOut;
-  if (!result.stats.isUncompressed) {
+  tally.charsAfter += text.length;
+  if (!emptied && !result.stats.isUncompressed) {
     tally.nodesCompressed += 1;
   }
-  return result.text;
+  return text;
 }
 
 /**
