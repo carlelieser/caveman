@@ -51,6 +51,9 @@ When compression runs, the response carries `X-Caveman-Tokens-Before`,
 is local and character-based; the billed counts are in the upstream response's
 `usage`.
 
+Caveman prints those counts to stdout as it forwards each compressed request,
+with a running total for the session. Set `DISABLE_LOGS` to hide them.
+
 ## What is never compressed
 
 Tool definitions, `tool_use.input`, `thinking` and `redacted_thinking` blocks,
@@ -79,7 +82,7 @@ src/
   compression/          tokenize, score, compress, pipeline
   policy/               header parsing
   http/                 Hono server, handler, upstream, SSE passthrough
-  telemetry/            token accounting and response headers
+  telemetry/            token accounting, response headers, savings log
 ```
 
 To add a provider, write a `ProviderAdapter` — a route, an upstream host, `toIR`,
