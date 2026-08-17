@@ -1,16 +1,21 @@
+import '../config/env.js';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { pathToFileURL } from 'node:url';
 import type { ProviderAdapter } from '../adapters/provider.js';
 import type { CompressionStage } from './messages.js';
 import { anthropicAdapter } from '../adapters/anthropic/adapter.js';
+import { claudeAdapter } from '../adapters/claude/adapter.js';
 import { createMessagesHandler } from './messages.js';
 import { createCompressionStage } from './compression-stage.js';
 
 const DEFAULT_PORT = 8787;
 
 /** Providers Caveman serves. Adding one is adding an entry here. */
-export const REGISTERED_ADAPTERS: readonly ProviderAdapter[] = [anthropicAdapter];
+export const REGISTERED_ADAPTERS: readonly ProviderAdapter[] = [
+  anthropicAdapter,
+  claudeAdapter,
+];
 
 export function createApp(
   stage: CompressionStage = createCompressionStage(),
