@@ -1,6 +1,6 @@
 # Caveman
 
-<img src="docs/images/caveman.png" alt="A caveman typing on a stone laptop by firelight" width="100%">
+<img src="docs/images/banner.png" alt="A caveman holding a torch before painted rocks in a cave" width="100%">
 
 A compression proxy that uses part-of-speech tagging to remove word classes, cutting tokens by about 30% on a
 mixed corpus and up to 46% on prose-heavy requests (see [Savings](#savings)).
