@@ -3,21 +3,23 @@
 <img src="docs/images/caveman.png" alt="A caveman typing on a stone laptop by firelight" width="100%">
 
 A compression proxy that uses part-of-speech tagging to remove word classes, cutting tokens by about 30% on a
-mixed corpus and up to 46% on prose-heavy requests (see [Savings](#savings--performance)).
+mixed corpus and up to 46% on prose-heavy requests (see [Savings](#savings)).
 
 See [DESIGN.md](docs/DESIGN.md) for a more detailed overview of the solution.
 
-## Quickstart
+## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/carlelieser/caveman/main/install.sh | bash
 ```
 
+## Usage
+
 ```sh
 caveman claude
 ```
 
-## Commands
+### Commands
 
 | Command                  | Does                                         |
 | ------------------------ | -------------------------------------------- |
@@ -26,9 +28,7 @@ caveman claude
 | `caveman status`         | Say whether it is running, and on which port |
 | `caveman <client> [...]` | Start it if needed, then launch a client     |
 
-Logs live in `run/` under the install root (`~/.caveman`).
-
-## Levels
+### Levels
 
 `-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman` — the
 default, and the most aggressive. Give it to `up` and every client inherits it;
@@ -53,7 +53,7 @@ the CLI would otherwise read as its own: `caveman claude -- -l debug.log`
 Nouns, verbs, numbers, proper nouns, negations and subordinators (`if`,
 `unless`, `because`) are never removed at any level.
 
-## Savings & performance
+### Savings
 
 | Level      | Tokens        | Saved  |
 | ---------- | ------------- | ------ |
@@ -73,10 +73,13 @@ log lines pass through untouched. At `caveman` level:
 | Mostly a pasted diff            | 32%   | -12.8% |
 | Terse expert question           | 31%   | -7.2%  |
 
+`npm run measure` to test against corpus.
+
+### Performance
+
 Compression runs at about 160k prose characters a second, which puts a typical
 request in this corpus between 1ms and 20ms.
 
-`npm run measure` to test against corpus and per request.
 `npm run measure -- --performance` to test pipeline latency.
 
 ## Running without the CLI
@@ -155,8 +158,8 @@ src/
   adapters/      wire format ↔ IR, one directory per provider
   compression/   region protection, word classification, the levels
   policy/        header parsing
-  http/          Hono server, request handler, upstream, health
-  telemetry/     accounting, response headers, savings log
+  http/          Hono server, request handler, upstream, SSE passthrough, health
+  telemetry/     accounting, response headers, savings log, usage
   config/        .env loading
 bin/
   caveman        the CLI entry point
