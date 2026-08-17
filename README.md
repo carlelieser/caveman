@@ -7,11 +7,12 @@ the rest upstream unchanged.
 Code, paths, JSON, stack traces, tool definitions and thinking blocks are copied
 byte for byte. Only prose is touched.
 
-Compression is off unless you ask for it. With no Caveman headers, a request is
-forwarded byte-identical to what the client sent.
+The server compresses nothing unless a request asks: with no Caveman headers it
+forwards byte-identical to what the client sent. The CLI asks on your behalf, so
+`caveman claude` compresses at the `caveman` level unless you pick another.
 
-See [DESIGN.md](docs/DESIGN.md) for why compression removes what it does and why the
-cache defaults are what they are.
+See [DESIGN.md](docs/DESIGN.md) for why compression removes what it does and why
+the cache defaults are what they are.
 
 ## Quickstart
 
@@ -36,9 +37,9 @@ Logs live in `run/` under the install root (`~/.caveman`).
 
 ### Compression level
 
-`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman` (default, most aggressive). Give it to
-`up` and every client inherits it; give it to a client and that launch alone
-uses it.
+`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman` — the
+default, and the most aggressive. Give it to `up` and every client inherits it;
+give it to a client and that launch alone uses it.
 
 ```sh
 caveman up -l moderate    # every client from now on
@@ -49,7 +50,9 @@ caveman claude -l off     # uncompressed, for a baseline
 
 At `off` the CLI sends no Caveman header, so the request forwards
 byte-identical — the same thing the server does for any client that doesn't
-ask. Pass a client's own flags after `--` if they collide with `-l`: `caveman claude -- -l debug.log`
+ask. Everything after `--` goes to the client untouched, which is how you pass
+a flag the CLI would otherwise read as its own:
+`caveman claude -- -l debug.log`
 
 ### Running without the CLI
 
@@ -67,8 +70,9 @@ ENABLE_TOOL_SEARCH=true \
 claude
 ```
 
-The header takes `light`, `moderate`, or `caveman`. Omit it and the request
-forwards byte-identical.
+Those three variables are exactly what `caveman claude` sets; the CLI adds
+starting the server and filling in the configured port. See
+[Headers](#headers) for the rest of what a request can ask for.
 
 ## Environment
 
@@ -90,6 +94,9 @@ The `service` name is how the CLI tells Caveman apart from an unrelated process
 holding the port, so it will not start over one or stop it.
 
 ## Headers
+
+The CLI sets `X-Caveman-Compress` from `-l` and leaves the other two alone.
+Send them yourself to reach what the CLI does not expose.
 
 | Header               | Meaning                                            | Default   |
 | -------------------- | -------------------------------------------------- | --------- |
