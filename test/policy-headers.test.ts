@@ -228,7 +228,6 @@ describe('CAVEMAN_HEADER_NAMES', () => {
       'X-Caveman-Compress',
       'X-Caveman-Scope',
       'X-Caveman-Scorer',
-      'X-Caveman-Claude-Mode',
     ]);
   });
 });

@@ -1,7 +1,6 @@
 const COMPRESS_HEADER = 'X-Caveman-Compress';
 const SCOPE_HEADER = 'X-Caveman-Scope';
 const SCORER_HEADER = 'X-Caveman-Scorer';
-const CLAUDE_MODE_HEADER = 'X-Caveman-Claude-Mode';
 
 const COMPRESS_MIN = 0;
 const COMPRESS_MAX = 0.9;
@@ -17,19 +16,7 @@ export const CAVEMAN_HEADER_NAMES = [
   COMPRESS_HEADER,
   SCOPE_HEADER,
   SCORER_HEADER,
-  CLAUDE_MODE_HEADER,
 ] as const;
-
-const CLAUDE_MODES = ['proxy', 'agent'] as const;
-
-/**
- * `proxy` replaces the CLI's agent prompt with the request's system prompt and
- * denies it tools, so the call behaves as much like a plain model call as a
- * CLI session can. `agent` leaves the CLI's own prompt and tools in place.
- */
-export type ClaudeMode = (typeof CLAUDE_MODES)[number];
-
-export const DEFAULT_CLAUDE_MODE: ClaudeMode = 'proxy';
 
 export type CompressionScope = Readonly<Record<ScopeName, boolean>>;
 
@@ -122,35 +109,6 @@ function parseScorer(rawValue: string | null): string | PolicyFailure {
     return failure(SCORER_HEADER, rawValue, 'must not be empty');
   }
   return trimmed;
-}
-
-function isClaudeMode(value: string): value is ClaudeMode {
-  return (CLAUDE_MODES as readonly string[]).includes(value);
-}
-
-export type ClaudeModeResult = { ok: true; mode: ClaudeMode } | PolicyFailure;
-
-/**
- * Read separately from the compression policy: the mode selects how one adapter
- * runs the CLI, and the pipeline has no use for it.
- */
-export function parseClaudeMode(headers: Headers): ClaudeModeResult {
-  const rawValue = headers.get(CLAUDE_MODE_HEADER);
-  if (rawValue === null) {
-    return { ok: true, mode: DEFAULT_CLAUDE_MODE };
-  }
-  const trimmed = rawValue.trim();
-  if (trimmed === '') {
-    return failure(CLAUDE_MODE_HEADER, rawValue, 'must not be empty');
-  }
-  if (!isClaudeMode(trimmed)) {
-    return failure(
-      CLAUDE_MODE_HEADER,
-      rawValue,
-      `must be one of ${CLAUDE_MODES.join(', ')}`,
-    );
-  }
-  return { ok: true, mode: trimmed };
 }
 
 export function parseCompressionPolicy(headers: Headers): PolicyResult {
