@@ -15,7 +15,7 @@ export type TextNodePath = {
   toolResultIndex: number | null;
 };
 
-/** A compressible text node plus the context a scorer needs to rank it. */
+/** A compressible text node plus the context compression needs to weigh it. */
 export type TextNode = {
   text: string;
   role: IrRole | null;

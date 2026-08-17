@@ -6,10 +6,10 @@ function headersWith(entries: Record<string, string>): Headers {
 }
 
 describe('parseCompressionPolicy defaults', () => {
-  it('defaults compress to 0 when X-Caveman-Compress is absent', () => {
+  it('defaults the level to null (off) when X-Caveman-Compress is absent', () => {
     const result = parseCompressionPolicy(headersWith({}));
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.compress).toBe(0);
+    if (result.ok) expect(result.policy.level).toBeNull();
   });
 
   it('defaults scope to messages only when X-Caveman-Scope is absent', () => {
@@ -23,103 +23,85 @@ describe('parseCompressionPolicy defaults', () => {
       });
     }
   });
-
-  it('defaults scorer to "heuristic" when X-Caveman-Scorer is absent', () => {
-    const result = parseCompressionPolicy(headersWith({}));
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.scorer).toBe('heuristic');
-  });
 });
 
-describe('X-Caveman-Compress boundary values', () => {
-  it('accepts 0 as the lower boundary (inclusive)', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '0' }));
+describe('X-Caveman-Compress levels', () => {
+  for (const level of ['light', 'moderate', 'caveman'] as const) {
+    it(`accepts "${level}"`, () => {
+      const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': level }));
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.policy.level).toBe(level);
+    });
+  }
+
+  it('accepts "off" as an explicit way to disable compression', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': 'off' }));
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.compress).toBe(0);
+    if (result.ok) expect(result.policy.level).toBeNull();
   });
 
-  it('accepts 0.9 as the upper boundary (inclusive)', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '0.9' }));
+  it('accepts a level in any case', () => {
+    const result = parseCompressionPolicy(
+      headersWith({ 'X-Caveman-Compress': 'CAVEMAN' }),
+    );
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.compress).toBe(0.9);
+    if (result.ok) expect(result.policy.level).toBe('caveman');
   });
 
-  it('rejects a value just over the upper boundary', () => {
+  it('accepts a level with surrounding whitespace', () => {
     const result = parseCompressionPolicy(
-      headersWith({ 'X-Caveman-Compress': '0.90001' }),
+      headersWith({ 'X-Caveman-Compress': '  light  ' }),
     );
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.header).toBe('X-Caveman-Compress');
-      expect(result.value).toBe('0.90001');
-    }
-  });
-
-  it('rejects a value just under the lower boundary', () => {
-    const result = parseCompressionPolicy(
-      headersWith({ 'X-Caveman-Compress': '-0.00001' }),
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.policy.level).toBe('light');
   });
 });
 
 describe('X-Caveman-Compress rejections', () => {
+  it('rejects a fraction, naming the header and listing the levels', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '0.5' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.header).toBe('X-Caveman-Compress');
+      expect(result.value).toBe('0.5');
+      expect(result.reason).toContain('light');
+      expect(result.reason).toContain('caveman');
+    }
+  });
+
+  it('rejects "0", which used to mean off', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '0' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
+  });
+
   it('rejects an empty string', () => {
     const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '' }));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
   });
 
-  it('rejects a non-numeric string ("abc")', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': 'abc' }));
+  it('rejects a whitespace-only value', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '   ' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
+  });
+
+  it('rejects an unknown level name', () => {
+    const result = parseCompressionPolicy(
+      headersWith({ 'X-Caveman-Compress': 'aggressive' }),
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.header).toBe('X-Caveman-Compress');
-      expect(result.value).toBe('abc');
+      expect(result.value).toBe('aggressive');
     }
   });
 
-  it('rejects a value above 0.9 ("1.5")', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '1.5' }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
-  });
-
-  it('rejects a negative value ("-0.1")', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '-0.1' }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
-  });
-
-  it('rejects the literal string "NaN"', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': 'NaN' }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
-  });
-
-  it('rejects the literal string "Infinity"', () => {
+  it('rejects a former scorer name', () => {
     const result = parseCompressionPolicy(
-      headersWith({ 'X-Caveman-Compress': 'Infinity' }),
+      headersWith({ 'X-Caveman-Compress': 'heuristic' }),
     );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
-  });
-
-  it('accepts scientific notation ("1e-1" parses as 0.1, within range)', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '1e-1' }));
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.compress).toBeCloseTo(0.1);
-  });
-
-  it('accepts a value with surrounding whitespace (" 0.3 " is trimmed)', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': ' 0.3 ' }));
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.compress).toBeCloseTo(0.3);
-  });
-
-  it('rejects a whitespace-only value', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Compress': '   ' }));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.header).toBe('X-Caveman-Compress');
   });
@@ -200,34 +182,8 @@ describe('X-Caveman-Scope parsing', () => {
   });
 });
 
-describe('X-Caveman-Scorer parsing', () => {
-  it('accepts a custom scorer name', () => {
-    const result = parseCompressionPolicy(
-      headersWith({ 'X-Caveman-Scorer': 'my-scorer' }),
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.policy.scorer).toBe('my-scorer');
-  });
-
-  it('rejects an empty string', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Scorer': '' }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Scorer');
-  });
-
-  it('rejects a whitespace-only value', () => {
-    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Scorer': '   ' }));
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.header).toBe('X-Caveman-Scorer');
-  });
-});
-
 describe('CAVEMAN_HEADER_NAMES', () => {
   it('lists exactly the Caveman header names for stripping upstream', () => {
-    expect(CAVEMAN_HEADER_NAMES).toEqual([
-      'X-Caveman-Compress',
-      'X-Caveman-Scope',
-      'X-Caveman-Scorer',
-    ]);
+    expect(CAVEMAN_HEADER_NAMES).toEqual(['X-Caveman-Compress', 'X-Caveman-Scope']);
   });
 });

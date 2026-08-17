@@ -41,7 +41,7 @@ function requestLine(
   const saving = [
     `${count(accounting.tokensBefore)} → ${count(accounting.tokensAfter)} tok`,
     percent(accounting.ratio),
-    accounting.scorer,
+    accounting.level,
     nodes(stats),
   ].join('  ');
   return `${PREFIX}  ${saving}  —  session ${count(total.tokensSaved)} saved`;

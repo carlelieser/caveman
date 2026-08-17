@@ -1,11 +1,12 @@
 /**
- * Recorded Anthropic `/v1/messages` request shapes. Each is a wire body that
- * must survive `fromIR(toIR(body))` unchanged.
+ * Recorded Anthropic `/v1/messages` request shapes, chosen for the structural
+ * edge cases they carry rather than for the size of their text. Realistic
+ * prompt-sized bodies live in `prompts.ts`.
  */
-export type RequestFixture = {
-  name: string;
-  body: Record<string, unknown>;
-};
+import type { RequestFixture } from './fixture.js';
+import { PROMPT_FIXTURES } from './prompts.js';
+
+export type { RequestFixture };
 
 const plainText: RequestFixture = {
   name: 'plain text conversation',
@@ -426,4 +427,5 @@ export const REQUEST_FIXTURES: readonly RequestFixture[] = [
   emptyToolsArray,
   messageLevelUnknownKey,
   clientKeyOrder,
+  ...PROMPT_FIXTURES,
 ];

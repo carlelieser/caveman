@@ -78,7 +78,7 @@ describe('provider adapter seam', () => {
 
   it('compresses a second provider through the same pipeline', async () => {
     const app = createApp(undefined, [fakeProviderAdapter]);
-    await app.fetch(post('/v2/chat', fakeBody(), { 'X-Caveman-Compress': '0.4' }));
+    await app.fetch(post('/v2/chat', fakeBody(), { 'X-Caveman-Compress': 'moderate' }));
     const forwarded = JSON.parse(upstream.requests.at(-1)?.body ?? '{}') as {
       prompt: string;
     };
@@ -88,7 +88,7 @@ describe('provider adapter seam', () => {
   it('reports errors in the provider’s own envelope shape', async () => {
     const app = createApp(undefined, [fakeProviderAdapter]);
     const response = await app.fetch(
-      post('/v2/chat', fakeBody(), { 'X-Caveman-Compress': '1.5' }),
+      post('/v2/chat', fakeBody(), { 'X-Caveman-Compress': 'bogus' }),
     );
     expect(response.status).toBe(400);
     const body = (await response.json()) as { fault?: string; error?: unknown };
@@ -187,7 +187,7 @@ describe('provider adapter seam', () => {
   it('keeps the anthropic error envelope on the anthropic route', async () => {
     const app = createApp(undefined, [anthropicAdapter]);
     const response = await app.fetch(
-      post('/v1/messages', {}, { 'X-Caveman-Compress': '1.5' }),
+      post('/v1/messages', {}, { 'X-Caveman-Compress': 'bogus' }),
     );
     const body = (await response.json()) as { error: { type: string } };
     expect(body.error.type).toBe('invalid_request_error');

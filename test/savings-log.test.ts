@@ -48,7 +48,7 @@ function post(headers: Record<string, string>, body = requestBody()): Request {
   });
 }
 
-const COMPRESS = { 'X-Caveman-Compress': '0.4' };
+const COMPRESS = { 'X-Caveman-Compress': 'moderate' };
 
 describe('savings logging', () => {
   let upstream: FakeUpstream;
@@ -82,7 +82,7 @@ describe('savings logging', () => {
         ?.slice(1) ?? [];
     expect(Number(after)).toBeLessThan(Number(before));
     expect(lines[0]).toMatch(/-\d+\.\d%/);
-    expect(lines[0]).toContain('heuristic');
+    expect(lines[0]).toContain('moderate');
     expect(lines[0]).toContain('1 node, 0 cached');
   });
 
@@ -91,8 +91,8 @@ describe('savings logging', () => {
     expect(lines).toEqual([]);
   });
 
-  it('writes nothing when the ratio is zero', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0' }));
+  it('writes nothing when the level is off', async () => {
+    await app.fetch(post({ 'X-Caveman-Compress': 'off' }));
     expect(lines).toEqual([]);
   });
 
@@ -112,7 +112,7 @@ describe('savings logging', () => {
   });
 
   it('writes nothing for a request rejected before it is forwarded', async () => {
-    await app.fetch(post({ ...COMPRESS, 'X-Caveman-Scorer': 'nonexistent' }));
+    await app.fetch(post({ 'X-Caveman-Compress': '0.5' }));
     expect(lines).toEqual([]);
   });
 

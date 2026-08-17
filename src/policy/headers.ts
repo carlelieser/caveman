@@ -1,29 +1,25 @@
+import type { Level } from '../compression/levels.js';
+import { LEVEL_NAMES, isLevel } from '../compression/levels.js';
+
 const COMPRESS_HEADER = 'X-Caveman-Compress';
 const SCOPE_HEADER = 'X-Caveman-Scope';
-const SCORER_HEADER = 'X-Caveman-Scorer';
 
-const COMPRESS_MIN = 0;
-const COMPRESS_MAX = 0.9;
+const OFF_VALUE = 'off';
 
 const SCOPE_NAMES = ['messages', 'system', 'tool_results'] as const;
 
 type ScopeName = (typeof SCOPE_NAMES)[number];
 
 const DEFAULT_SCOPE: readonly ScopeName[] = ['messages'];
-const DEFAULT_SCORER = 'heuristic';
 
-export const CAVEMAN_HEADER_NAMES = [
-  COMPRESS_HEADER,
-  SCOPE_HEADER,
-  SCORER_HEADER,
-] as const;
+export const CAVEMAN_HEADER_NAMES = [COMPRESS_HEADER, SCOPE_HEADER] as const;
 
 export type CompressionScope = Readonly<Record<ScopeName, boolean>>;
 
 export type CompressionPolicy = {
-  compress: number;
+  /** Null when compression is off, which is the default. */
+  level: Level | null;
   scope: CompressionScope;
-  scorer: string;
 };
 
 export type PolicyFailure = {
@@ -51,26 +47,29 @@ function failure(header: string, value: string, reason: string): PolicyFailure {
   return { ok: false, header, value, reason };
 }
 
-function parseCompress(rawValue: string | null): number | PolicyFailure {
+const ACCEPTED_VALUES = [OFF_VALUE, ...LEVEL_NAMES].join(', ');
+
+/**
+ * Levels are named, never numeric. A fraction used to mean "drop this share of
+ * the tokens"; nothing removes a share of a class, so a number is now a
+ * malformed value rather than a legacy spelling to be mapped onto a level.
+ */
+function parseCompress(rawValue: string | null): Level | null | PolicyFailure {
   if (rawValue === null) {
-    return 0;
+    return null;
   }
   const trimmed = rawValue.trim();
   if (trimmed === '') {
     return failure(COMPRESS_HEADER, rawValue, 'must not be empty');
   }
-  const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) {
-    return failure(COMPRESS_HEADER, rawValue, 'must be a finite number');
+  const normalized = trimmed.toLowerCase();
+  if (normalized === OFF_VALUE) {
+    return null;
   }
-  if (parsed < COMPRESS_MIN || parsed > COMPRESS_MAX) {
-    return failure(
-      COMPRESS_HEADER,
-      rawValue,
-      `must be between ${COMPRESS_MIN} and ${COMPRESS_MAX} inclusive`,
-    );
+  if (!isLevel(normalized)) {
+    return failure(COMPRESS_HEADER, rawValue, `must be one of ${ACCEPTED_VALUES}`);
   }
-  return parsed;
+  return normalized;
 }
 
 function parseScope(rawValue: string | null): readonly ScopeName[] | PolicyFailure {
@@ -100,35 +99,23 @@ function parseScope(rawValue: string | null): readonly ScopeName[] | PolicyFailu
   return names;
 }
 
-function parseScorer(rawValue: string | null): string | PolicyFailure {
-  if (rawValue === null) {
-    return DEFAULT_SCORER;
-  }
-  const trimmed = rawValue.trim();
-  if (trimmed === '') {
-    return failure(SCORER_HEADER, rawValue, 'must not be empty');
-  }
-  return trimmed;
+function isFailure(value: unknown): value is PolicyFailure {
+  return typeof value === 'object' && value !== null && 'ok' in value;
 }
 
 export function parseCompressionPolicy(headers: Headers): PolicyResult {
-  const compress = parseCompress(headers.get(COMPRESS_HEADER));
-  if (typeof compress !== 'number') {
-    return compress;
+  const level = parseCompress(headers.get(COMPRESS_HEADER));
+  if (isFailure(level)) {
+    return level;
   }
 
   const scopeNames = parseScope(headers.get(SCOPE_HEADER));
-  if ('ok' in scopeNames) {
+  if (isFailure(scopeNames)) {
     return scopeNames;
-  }
-
-  const scorer = parseScorer(headers.get(SCORER_HEADER));
-  if (typeof scorer !== 'string') {
-    return scorer;
   }
 
   return {
     ok: true,
-    policy: { compress, scope: buildScope(scopeNames), scorer },
+    policy: { level, scope: buildScope(scopeNames) },
   };
 }

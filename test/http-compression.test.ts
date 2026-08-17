@@ -54,38 +54,38 @@ describe('compression over HTTP', () => {
     expect(forwardedBody(upstream)).toEqual(requestBody());
   });
 
-  it('forwards the body untouched when the ratio is zero', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0' }));
+  it('forwards the body untouched when the level is off', async () => {
+    await app.fetch(post({ 'X-Caveman-Compress': 'off' }));
     expect(forwardedBody(upstream)).toEqual(requestBody());
   });
 
   it('shortens message text when compression is on', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
+    await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
     const forwarded = forwardedBody(upstream);
     const messages = forwarded['messages'] as { content: string }[];
     expect(messages[0]?.content.length).toBeLessThan(VERBOSE_MESSAGE.length);
   });
 
   it('leaves the system prompt alone under the default scope', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
+    await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
     expect(forwardedBody(upstream)['system']).toBe(VERBOSE_SYSTEM);
   });
 
   it('compresses the system prompt when the scope includes it', async () => {
     await app.fetch(
-      post({ 'X-Caveman-Compress': '0.4', 'X-Caveman-Scope': 'messages,system' }),
+      post({ 'X-Caveman-Compress': 'moderate', 'X-Caveman-Scope': 'messages,system' }),
     );
     const forwarded = forwardedBody(upstream);
     expect(String(forwarded['system']).length).toBeLessThan(VERBOSE_SYSTEM.length);
   });
 
   it('reports accounting headers when compression ran', async () => {
-    const response = await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
+    const response = await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
     const before = Number(response.headers.get('X-Caveman-Tokens-Before'));
     const after = Number(response.headers.get('X-Caveman-Tokens-After'));
     expect(after).toBeLessThan(before);
     expect(Number(response.headers.get('X-Caveman-Ratio'))).toBeGreaterThan(0);
-    expect(response.headers.get('X-Caveman-Scorer')).toBe('heuristic');
+    expect(response.headers.get('X-Caveman-Level')).toBe('moderate');
   });
 
   it('omits accounting headers when compression is off', async () => {
@@ -99,31 +99,39 @@ describe('compression over HTTP', () => {
       response.writeHead(400, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ type: 'error' }));
     });
-    const response = await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
+    const response = await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
     expect(response.status).toBe(400);
     expect(response.headers.get('X-Caveman-Ratio')).not.toBeNull();
   });
 
-  it('rejects an unknown scorer with 400 naming the header', async () => {
-    const response = await app.fetch(
-      post({ 'X-Caveman-Compress': '0.4', 'X-Caveman-Scorer': 'nonexistent' }),
-    );
+  it('rejects a fractional compress value with 400 naming the header', async () => {
+    const response = await app.fetch(post({ 'X-Caveman-Compress': '0.5' }));
     expect(response.status).toBe(400);
     const body = (await response.json()) as { error: { message: string } };
-    expect(body.error.message).toContain('X-Caveman-Scorer');
+    expect(body.error.message).toContain('X-Caveman-Compress');
+    expect(upstream.requests).toHaveLength(0);
+  });
+
+  it('rejects an unknown level with 400 naming the header', async () => {
+    const response = await app.fetch(post({ 'X-Caveman-Compress': 'aggressive' }));
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: { message: string } };
+    expect(body.error.message).toContain('X-Caveman-Compress');
     expect(upstream.requests).toHaveLength(0);
   });
 
   it('never forwards Caveman control headers upstream', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0.4', 'X-Caveman-Scope': 'messages' }));
+    await app.fetch(
+      post({ 'X-Caveman-Compress': 'moderate', 'X-Caveman-Scope': 'messages' }),
+    );
     const recorded = upstream.requests.at(-1);
     expect(recorded?.headers['x-caveman-compress']).toBeUndefined();
     expect(recorded?.headers['x-caveman-scope']).toBeUndefined();
   });
 
   it('sends a byte-identical body when the same request is compressed twice', async () => {
-    await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
-    await app.fetch(post({ 'X-Caveman-Compress': '0.4' }));
+    await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
+    await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
     const [first, second] = upstream.requests;
     expect(first?.body).toBe(second?.body);
   });

@@ -4,8 +4,7 @@ import { accountFor } from '../src/telemetry/accounting.js';
 
 function statsFor(charsBefore: number, charsAfter: number): PipelineStats {
   return {
-    scorer: 'heuristic',
-    ratio: 0.4,
+    level: 'moderate',
     nodesSeen: 1,
     nodesCompressed: 1,
     nodesSkipped: 0,
