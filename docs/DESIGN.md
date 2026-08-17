@@ -69,6 +69,11 @@ Anything matching a protection pattern resolves to protected. Over-protecting
 costs savings; under-protecting corrupts a code block, a path, or a stack trace
 the model needs verbatim.
 
+Whole blocks are excluded before any of this runs: tool definitions,
+`tool_use.input`, `thinking` and `redacted_thinking`, images, documents, and any
+block type the adapter does not recognize. What follows applies to the text
+blocks that remain.
+
 Line-level protection runs first: fenced blocks (fence lines included, so a
 URL inside one never fragments), indented code, table rows, stack trace lines.
 An unterminated fence protects everything after it. Then inline patterns:
