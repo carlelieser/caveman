@@ -1,18 +1,8 @@
 # Caveman
 
-A compression proxy for LLM requests. It removes whole classes of function words
-from the prose in a request — determiners, prepositions, adverbs — and forwards
-the rest upstream unchanged.
+An LLM compression proxy. Uses part-of-speech natural language processing to identify and remove unnecessary words, effectively reducing token usage by up to 46%.
 
-Code, paths, JSON, stack traces, tool definitions and thinking blocks are copied
-byte for byte. Only prose is touched.
-
-The server compresses nothing unless a request asks: with no Caveman headers it
-forwards byte-identical to what the client sent. The CLI asks on your behalf, so
-`caveman claude` compresses at the `caveman` level unless you pick another.
-
-See [DESIGN.md](docs/DESIGN.md) for why compression removes what it does and why
-the cache defaults are what they are.
+See [DESIGN.md](docs/DESIGN.md) for a more detailed overview of the pipeline.
 
 ## Quickstart
 
@@ -129,6 +119,28 @@ and the prefix misses. `respect` exists to measure the default (see
 Nouns, verbs, numbers, proper nouns, negations and subordinators (`if`,
 `unless`, `because`) are never removed at any level.
 
+## Results
+
+| Level      | Tokens        | Saved  |
+| ---------- | ------------- | ------ |
+| `light`    | 6,287 → 5,880 | -6.5%  |
+| `moderate` | 6,287 → 4,935 | -21.5% |
+| `caveman`  | 6,287 → 4,442 | -29.3% |
+
+Savings depend on how much of the request is prose, since code, JSON, and
+log lines pass through untouched. At `caveman` level:
+
+| Request                         | Prose | Saved  |
+| ------------------------------- | ----- | ------ |
+| Rambling bug report             | 99%   | -46.0% |
+| Dense prose, no code            | 100%  | -39.3% |
+| Six-turn debugging conversation | 98%   | -36.9% |
+| Bug report with a stack trace   | 70%   | -27.8% |
+| Mostly a pasted diff            | 32%   | -12.8% |
+| Terse expert question           | 31%   | -7.2%  |
+
+`npm run measure` to test against corpus and per request.
+
 ## Telemetry
 
 When compression runs, the response carries `X-Caveman-Tokens-Before`,
@@ -165,6 +177,8 @@ bin/
   caveman               the CLI entry point
   lib/                  paths, port, level, health, daemon, client
   clients/              one file per client
+scripts/
+  measure.ts            return token savings per level
 ```
 
 ## Tests
