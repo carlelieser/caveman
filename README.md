@@ -5,7 +5,7 @@
 A compression proxy that uses part-of-speech tagging to remove word classes, cutting tokens by about 30% on a
 mixed corpus and up to 46% on prose-heavy requests (see [Savings](#savings)).
 
-See [DESIGN.md](docs/DESIGN.md) for a more detailed overview of the solution.
+See [DESIGN.md](docs/DESIGN.md) for more detail.
 
 ## Install
 
