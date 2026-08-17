@@ -1,0 +1,90 @@
+# Caveman
+
+A transparent normalizing compression proxy. It converts a provider-native
+request into one internal representation, drops the lowest-scoring tokens from
+eligible text, converts back to the provider's wire format, and forwards it
+upstream.
+
+The representation is provider-neutral. Provider-specific code lives in adapters;
+the compression pipeline has no wire format. Anthropic is the adapter that ships
+today.
+
+Compression is off unless you ask for it. With no Caveman headers, a request is
+normalized, denormalized, and forwarded unchanged.
+
+## Running
+
+```sh
+npm install
+npm run dev          # tsx watch, listens on PORT (default 8787)
+```
+
+With the Anthropic adapter, point any Anthropic SDK client at it:
+
+```ts
+new Anthropic({
+  baseURL: 'http://localhost:8787',
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+```
+
+Each adapter has its own upstream host. `CAVEMAN_<PROVIDER>_BASE_URL` redirects
+one provider (`CAVEMAN_ANTHROPIC_BASE_URL`); `CAVEMAN_UPSTREAM_BASE_URL`
+redirects all of them. The per-provider variable wins.
+
+## Headers
+
+| Header               | Meaning                                            | Default     |
+| -------------------- | -------------------------------------------------- | ----------- |
+| `X-Caveman-Compress` | Fraction of eligible tokens to drop, `0`–`0.9`     | `0` (off)   |
+| `X-Caveman-Scope`    | Comma list of `messages`, `system`, `tool_results` | `messages`  |
+| `X-Caveman-Scorer`   | Scorer name                                        | `heuristic` |
+
+A malformed value returns 400 naming the header. It is never coerced to a
+default. Caveman headers are stripped before forwarding; auth headers pass
+through untouched and are never read or logged.
+
+When compression runs, the response carries `X-Caveman-Tokens-Before`,
+`X-Caveman-Tokens-After`, `X-Caveman-Ratio`, and `X-Caveman-Scorer`. Estimation
+is local and character-based; the billed counts are in the upstream response's
+`usage`.
+
+## What is never compressed
+
+Tool definitions, `tool_use.input`, `thinking` and `redacted_thinking` blocks,
+images, and documents. A block type the adapter does not recognize round-trips
+verbatim as passthrough.
+
+Compression is deterministic: the same text, ratio, and scorer version produce
+identical bytes. A compressed prefix marked with `cache_control` stays cacheable.
+
+## Layout
+
+```
+src/
+  ir/                   provider-neutral representation and its walk
+  adapters/anthropic/   wire format ↔ IR
+  compression/          tokenize, score, compress, pipeline
+  policy/               header parsing
+  http/                 Hono server, handler, upstream, SSE passthrough
+  telemetry/            token accounting and response headers
+```
+
+To add a provider, write a `ProviderAdapter` — a route, an upstream host, `toIR`,
+`fromIR`, an error envelope — and add it to `REGISTERED_ADAPTERS` in
+`src/http/server.ts`. The handler, the pipeline, and the IR are untouched. Every
+registered adapter serves on its own route.
+
+Dependencies point one direction: `http → pipeline → ir` and
+`http → adapters → ir`. Adapters and compression never import each other.
+
+## Tests
+
+```sh
+npm test
+```
+
+Round-trip identity: `fromIR(toIR(x))` deep-equals `x` across recorded request
+shapes. Determinism: identical output across separate processes. Structural
+validity: every fixture compressed at several ratios still has parseable
+`tool_use` inputs, unchanged `thinking` blocks, and no empty text block.
