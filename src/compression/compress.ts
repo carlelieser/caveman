@@ -89,14 +89,28 @@ function terminalMarkOf(gap: string): string | null {
 function stripOrphans(gap: string): string {
   const stripped = gap.replace(LEADING_PUNCTUATION_PATTERN, '');
   if (stripped === '') {
-    return gap.includes('\n') ? '\n' : ' ';
+    return breakFor(gap);
   }
   return stripped;
 }
 
-/** Collapses runs of whitespace, keeping a line break where one existed. */
+/** Collapses each whitespace run to a space, a line break, or a blank line. */
 function collapseWhitespace(gap: string): string {
-  return gap.replace(WHITESPACE_RUN_PATTERN, (run) => (run.includes('\n') ? '\n' : ' '));
+  return gap.replace(WHITESPACE_RUN_PATTERN, (run) => breakFor(run));
+}
+
+function breakFor(run: string): string {
+  const newlines = countNewlines(run);
+  if (newlines === 0) return ' ';
+  return newlines === 1 ? '\n' : '\n\n';
+}
+
+function countNewlines(run: string): number {
+  let count = 0;
+  for (const character of run) {
+    if (character === '\n') count += 1;
+  }
+  return count;
 }
 
 type Assembly = {

@@ -121,6 +121,17 @@ describe('compressText invariants', () => {
     }
   });
 
+  it('keeps a paragraph break across a drop', () => {
+    const text = 'the first thing here.\n\nthe second thing here.';
+    for (const level of LEVELS) {
+      expect(compress(text, level)).toBe('first thing here.\n\nsecond thing here.');
+    }
+  });
+
+  it('keeps a single line break single', () => {
+    expect(compress('one line\nthe next line', 'moderate')).toBe('one line\nnext line');
+  });
+
   it('does not indent a block whose opening word was dropped', () => {
     expect(compress('The man went to the store.', 'light')).toBe('man went to store.');
   });
