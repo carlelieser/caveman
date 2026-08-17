@@ -53,6 +53,7 @@ start_server() {
     exit "$status"
   fi
   say "caveman listening on $CAVEMAN_BASE_URL"
+  say "level: $(resolve_level)"
   say "logs: $CAVEMAN_LOG_FILE"
 }
 
@@ -98,6 +99,7 @@ stop_server() {
 report_status() {
   if is_running; then
     say "caveman is running on $CAVEMAN_BASE_URL"
+    say "level: $(resolve_level)"
     pid=$(read_pid) && say "pid: $pid"
     say "logs: $CAVEMAN_LOG_FILE"
     return "$EXIT_OK"

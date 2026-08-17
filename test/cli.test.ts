@@ -208,3 +208,82 @@ describe('client dispatch', () => {
     expect(result.stdout).toContain('codex');
   });
 });
+
+describe('compression level', () => {
+  let clientDir: string;
+  let port: string;
+
+  /** Reports the level it would send and the arguments it was left with. */
+  async function writeReporter(): Promise<void> {
+    await writeFile(
+      join(clientDir, 'show.sh'),
+      'client_launch() { printf "level=%s args=%s\\n" "$CAVEMAN_LEVEL" "$*"; }\n',
+    );
+  }
+
+  function show(args: string[]): Promise<Run> {
+    return run(['show', ...args], { PORT: port, CAVEMAN_CLIENT_DIR: clientDir });
+  }
+
+  beforeEach(async () => {
+    clientDir = await mkdtemp(join(tmpdir(), 'caveman-level-'));
+    port = String(await freePort());
+    await writeReporter();
+  });
+
+  afterEach(async () => {
+    await run(['down'], { PORT: port });
+    await rm(clientDir, { recursive: true, force: true });
+  });
+
+  it('rejects a level that is not one of the four', async () => {
+    const result = await run(['up', '--level', 'bogus'], { PORT: port });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('bogus');
+  });
+
+  it('rejects the flag with no level after it', async () => {
+    const result = await run(['up', '--level'], { PORT: port });
+    expect(result.code).toBe(2);
+  });
+
+  it('sends off when no level was ever given', async () => {
+    await run(['up'], { PORT: port });
+    expect((await show([])).stdout).toContain('level=off');
+  });
+
+  it('inherits the level given to up', async () => {
+    await run(['up', '-l', 'moderate'], { PORT: port });
+    expect((await show([])).stdout).toContain('level=moderate');
+  });
+
+  it('reports the stored level in status', async () => {
+    await run(['up', '-l', 'light'], { PORT: port });
+    const result = await run(['status'], { PORT: port });
+    expect(result.stdout).toContain('level: light');
+  });
+
+  it('lets a client override the stored level for that launch only', async () => {
+    await run(['up', '-l', 'moderate'], { PORT: port });
+    expect((await show(['-l', 'caveman'])).stdout).toContain('level=caveman');
+    expect((await show([])).stdout).toContain('level=moderate');
+  });
+
+  it('accepts --level=value as well as a separate argument', async () => {
+    await run(['up', '--level=caveman'], { PORT: port });
+    expect((await show([])).stdout).toContain('level=caveman');
+  });
+
+  it('keeps the level flag out of the arguments the client receives', async () => {
+    await run(['up'], { PORT: port });
+    const result = await show(['-l', 'light', '--resume', '-p', 'hi there']);
+    expect(result.stdout).toContain('args=--resume -p hi there');
+  });
+
+  it('leaves a client’s own -l alone after --', async () => {
+    await run(['up', '-l', 'light'], { PORT: port });
+    const result = await show(['--', '-l', 'something']);
+    expect(result.stdout).toContain('level=light');
+    expect(result.stdout).toContain('args=-l something');
+  });
+});

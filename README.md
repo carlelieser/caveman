@@ -20,30 +20,39 @@ curl -fsSL https://raw.githubusercontent.com/carlelieser/caveman/main/install.sh
 ```
 
 ```sh
-caveman claude
+caveman claude -l caveman
 ```
-
-That starts the proxy if it is not already up and launches `claude` against it.
-Arguments pass through, so `caveman claude --resume` works.
-
-Run `install.sh` from inside a clone and it links that clone, so your edits are
-what runs.
 
 ## Commands
 
-| Command                  | Does                                                  |
-| ------------------------ | ----------------------------------------------------- |
-| `caveman up`             | Start the proxy in the background                     |
-| `caveman down`           | Stop it, reporting the session savings                |
-| `caveman status`         | Say whether it is running, and on which port          |
-| `caveman <client> [...]` | Start it if needed, then launch a client              |
+| Command                  | Does                                         |
+| ------------------------ | -------------------------------------------- |
+| `caveman up`             | Start the proxy in the background            |
+| `caveman down`           | Stop it, reporting the session savings       |
+| `caveman status`         | Say whether it is running, and on which port |
+| `caveman <client> [...]` | Start it if needed, then launch a client     |
 
-Logs and the pid file live in `run/` under the install root. A client is a file
-in `bin/clients/`, so adding one is adding a file.
+Logs live in `run/` under the install root (`~/.caveman`).
+
+### Compression level
+
+`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman`. Give it to
+`up` and every client inherits it; give it to a client and that launch alone
+uses it. With no level anywhere the default is `off`, so nothing is compressed
+until you ask.
+
+```sh
+caveman up -l moderate    # every client from now on
+caveman claude            # moderate, inherited
+caveman claude -l caveman # this launch only
+```
+
+At `off` the CLI sends no Caveman header at all, so the request forwards
+byte-identical. Pass a client's own flags after `--` if they collide with `-l`.
 
 ### Running without the CLI
 
-The proxy is an ordinary server, and the CLI only sets these for you:
+The proxy is an ordinary server, so run it and point a client at it yourself:
 
 ```sh
 npm install
@@ -56,6 +65,9 @@ ANTHROPIC_CUSTOM_HEADERS="X-Caveman-Compress: caveman" \
 ENABLE_TOOL_SEARCH=true \
 claude
 ```
+
+The header takes `light`, `moderate`, or `caveman`. Omit it and the request
+forwards byte-identical.
 
 ## Environment
 
@@ -143,7 +155,7 @@ src/
   config/               .env loading
 bin/
   caveman               the CLI entry point
-  lib/                  paths, port, health, daemon, client
+  lib/                  paths, port, level, health, daemon, client
   clients/              one file per client
 ```
 

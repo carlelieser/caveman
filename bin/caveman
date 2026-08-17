@@ -30,15 +30,20 @@ init_paths "$CAVEMAN_BIN_DIR"
 . "$CAVEMAN_HOME/bin/lib/daemon.sh"
 # shellcheck source=lib/client.sh
 . "$CAVEMAN_HOME/bin/lib/client.sh"
+# shellcheck source=lib/level.sh
+. "$CAVEMAN_HOME/bin/lib/level.sh"
 
 usage() {
   say "caveman — a compression proxy for LLM requests"
   say ""
   say "usage:"
-  say "  caveman up              start the proxy in the background"
-  say "  caveman down            stop the proxy"
-  say "  caveman status          report whether the proxy is running"
-  say "  caveman <client> [...]  start the proxy, then launch a client"
+  say "  caveman up [-l LEVEL]         start the proxy in the background"
+  say "  caveman down                  stop the proxy"
+  say "  caveman status                report whether the proxy is running"
+  say "  caveman <client> [-l LEVEL]   start the proxy, then launch a client"
+  say ""
+  say "  -l, --level LEVEL       $LEVEL_NAMES (default $DEFAULT_LEVEL)"
+  say "                          a level given to up is inherited by clients"
   say ""
   say "clients:"
   names=$(client_names)
@@ -53,9 +58,13 @@ main() {
   command=${1:-}
   [ "$#" -gt 0 ] && shift
 
+  parse_level_flag "$@"
+  set -- ${CAVEMAN_ARGS[@]+"${CAVEMAN_ARGS[@]}"}
+
   case $command in
     up)
       init_port
+      store_level "$(resolve_level)"
       start_server
       ;;
     down)
@@ -76,6 +85,7 @@ main() {
     *)
       if has_client "$command"; then
         init_port
+        CAVEMAN_LEVEL=$(resolve_level)
         launch_client "$command" "$@"
       else
         warn "caveman: unknown command \"$command\""
