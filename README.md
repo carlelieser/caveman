@@ -43,10 +43,11 @@ login reaches the API the same way an API key does. Point one at Caveman with
 
 ## Headers
 
-| Header               | Meaning                                            | Default    |
-| -------------------- | -------------------------------------------------- | ---------- |
-| `X-Caveman-Compress` | `off`, `light`, `moderate`, or `caveman`           | `off`      |
-| `X-Caveman-Scope`    | Comma list of `messages`, `system`, `tool_results` | `messages` |
+| Header               | Meaning                                            | Default   |
+| -------------------- | -------------------------------------------------- | --------- |
+| `X-Caveman-Compress` | `off`, `light`, `moderate`, or `caveman`           | `off`     |
+| `X-Caveman-Scope`    | Comma list of `messages`, `system`, `tool_results` | all three |
+| `X-Caveman-Cache`    | `ignore` or `respect`                              | `ignore`  |
 
 Levels name what they remove, and they nest — each one removes everything the
 level below it does, plus more.
@@ -57,9 +58,21 @@ level below it does, plus more.
 | `moderate` | + prepositions, conjunctions, auxiliaries, copulas, pronouns | "man quickly gone very large store"                |
 | `caveman`  | + adverbs, adjectives                                        | "man gone store"                                   |
 
-Nouns, verbs, numbers, proper nouns and negations are never removed at any
-level. A word the classifier does not recognize is kept, so a tagging miss
-costs savings rather than meaning.
+Nouns, verbs, numbers, proper nouns, negations and subordinators are never
+removed at any level. A word the classifier does not recognize is kept, so a
+tagging miss costs savings rather than meaning.
+
+A subordinator — `if`, `unless`, `when`, `before`, `because`, `although`,
+`otherwise` and the rest of that closed class — is the word that relates one
+clause to another. Drop it and both clauses remain, now asserted: "do not
+proceed if the tests fail" becomes "do not proceed, the tests fail", a claim
+that the tests failed. The token count records the saving and has no way to
+show the loss.
+
+These words are kept by an explicit list, not by their tag. The classifier gives
+`before` the same tag in "proceed before the tests pass" and in "the file before
+the directory". Keeping a non-subordinating use costs one short word; dropping a
+subordinating one costs the meaning of the clause.
 
 A malformed value returns 400 naming the header. It is never coerced to a
 default — a fractional value like `0.5`, which earlier versions accepted, is
@@ -74,6 +87,23 @@ in the upstream response's `usage`.
 
 Caveman prints those counts to stdout as it forwards each compressed request,
 with a running total for the session. Set `DISABLE_LOGS` to hide them.
+
+It also prints what the provider billed, read from the response as it streams
+past:
+
+```
+caveman  billed  5,710 in  412 out  4,200 cache read  0 cache write
+```
+
+These are the counts the invoice is built from. A cache read is billed at a
+fraction of the base rate and a cache write at a premium, so a prefix that
+stopped matching shows up here as writes replacing reads. The line is printed
+even when compression is off, so an uncompressed session gives a baseline. A
+response that carries no counts prints no line.
+
+Reading them costs the stream nothing. Each chunk is forwarded before it is
+inspected, so the first token still reaches the client as soon as upstream
+emits it.
 
 ## What is never compressed
 
@@ -94,11 +124,29 @@ Compression is deterministic: the same text and level produce identical bytes,
 in any process. The `compromise` dependency is pinned to an exact version
 because its lexicon decides how a word is tagged.
 
-Text at or before the last `cache_control` breakpoint is never compressed. The
-prompt cache matches on the serialized request prefix, so rewriting a cached
-block trades a small saving for re-billing the whole cached segment as a fresh
-write. With a client that caches its system prompt and tools, this can leave
-little compressible on the first turn; that is the intended trade.
+## Caching
+
+Text under a `cache_control` breakpoint is compressed like any other. A prompt
+cache matches on the prefix bytes being identical from one turn to the next. The
+compressor reads only a node's text and the level, never where the node sits, so
+a node has one compressed form and produces it on every turn. The cached prefix
+settles in compressed form and keeps hitting.
+
+The turn a node first compresses costs one write of the segment it lies in. A
+growing conversation writes that segment anyway: each turn extends the prefix and
+re-writes its tail. From then on the written size is the compressed one, and
+every later read is of a smaller prefix.
+
+A positional rule breaks this. If nodes behind a breakpoint are skipped, a node's
+output depends on where the breakpoint sits, and a rolling breakpoint that
+advances past a node flips it from compressed text back to original. The prefix
+changes and the cache misses on that turn.
+
+`X-Caveman-Cache: respect` is the older behaviour: skip every node at or before
+the last breakpoint. The cached prefix stays byte-identical to the one that
+arrived and is never compressed — with a client that caches its system prompt
+and tools, that is most of the request. It has the positional instability
+described above, and exists to measure the default against.
 
 For the same reason a forwarded request is byte-identical to the one that
 arrived, not merely equal to it: key order is preserved at every level, since
