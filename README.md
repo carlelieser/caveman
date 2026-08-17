@@ -178,7 +178,7 @@ bin/
   lib/                  paths, port, level, health, daemon, client
   clients/              one file per client
 scripts/
-  measure.ts            return token savings per level
+  measure.ts            measure token savings per level and request type
 ```
 
 ## Tests
