@@ -4,6 +4,7 @@ import type { CompressionPolicy, PolicyFailure } from '../policy/headers.js';
 import type { IrRequest } from '../ir/types.js';
 import type { PipelineStats } from '../compression/pipeline.js';
 import type { ResponseDecorator } from './upstream.js';
+import type { SavingsReporter } from '../telemetry/savings-log.js';
 import { parseCompressionPolicy } from '../policy/headers.js';
 import { accountFor, applyAccountingHeaders } from '../telemetry/accounting.js';
 import { UnknownScorerError } from './unknown-scorer-error.js';
@@ -66,6 +67,7 @@ function accountingDecorator(stats: PipelineStats | null): ResponseDecorator {
 type Route = {
   adapter: ProviderAdapter;
   stage: CompressionStage;
+  reporter: SavingsReporter | null;
 };
 
 function reject(context: Context, route: Route, message: string): Response {
@@ -117,17 +119,22 @@ async function forwardMessages(context: Context, route: Route): Promise<Response
     search: incomingSearch(context.req.raw.url),
     signal: context.req.raw.signal,
   });
+  if (staged.stats !== null) {
+    route.reporter?.record(staged.stats);
+  }
   return passthroughResponse(upstream, accountingDecorator(staged.stats));
 }
 
 /**
- * Builds the handler for one provider. Both the adapter and the pipeline are
- * injected, so the handler holds no knowledge of any provider's wire format.
+ * Builds the handler for one provider. The adapter, the pipeline, and the
+ * reporter are injected, so the handler holds no knowledge of any provider's
+ * wire format and none of where its output goes.
  */
 export function createMessagesHandler(
   adapter: ProviderAdapter,
   stage: CompressionStage = identityCompressionStage,
+  reporter: SavingsReporter | null = null,
 ): (context: Context) => Promise<Response> {
-  const route: Route = { adapter, stage };
+  const route: Route = { adapter, stage, reporter };
   return (context) => forwardMessages(context, route);
 }

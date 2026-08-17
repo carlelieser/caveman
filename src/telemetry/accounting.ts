@@ -10,6 +10,7 @@ const CHARS_PER_TOKEN = 4;
 export type TokenAccounting = {
   tokensBefore: number;
   tokensAfter: number;
+  tokensSaved: number;
   ratio: number;
   scorer: string;
 };
@@ -41,6 +42,7 @@ export function accountFor(stats: PipelineStats): TokenAccounting {
   return {
     tokensBefore,
     tokensAfter,
+    tokensSaved: tokensBefore - tokensAfter,
     ratio: roundRatio(reductionRatio(tokensBefore, tokensAfter)),
     scorer: stats.scorer,
   };
