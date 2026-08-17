@@ -1,7 +1,11 @@
 # The compression level: parsing the flag, and remembering what `up` was given.
 
 LEVEL_NAMES='off light moderate caveman'
-DEFAULT_LEVEL=off
+
+# Asking for the CLI is asking for compression: `caveman claude` that forwards
+# uncompressed is the proxy doing nothing. The server defaults to `off` for the
+# opposite reason — it must forward byte-identical to a client that never asked.
+DEFAULT_LEVEL=caveman
 
 is_level() {
   for name in $LEVEL_NAMES; do

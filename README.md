@@ -20,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/carlelieser/caveman/main/install.sh
 ```
 
 ```sh
-caveman claude -l caveman
+caveman claude
 ```
 
 ## Commands
@@ -38,17 +38,18 @@ Logs live in `run/` under the install root (`~/.caveman`).
 
 `-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman`. Give it to
 `up` and every client inherits it; give it to a client and that launch alone
-uses it. With no level anywhere the default is `off`, so nothing is compressed
-until you ask.
+uses it. The CLI defaults to `caveman`, since running it is the ask.
 
 ```sh
 caveman up -l moderate    # every client from now on
 caveman claude            # moderate, inherited
-caveman claude -l caveman # this launch only
+caveman claude -l light   # this launch only
+caveman claude -l off     # uncompressed, for a baseline
 ```
 
-At `off` the CLI sends no Caveman header at all, so the request forwards
-byte-identical. Pass a client's own flags after `--` if they collide with `-l`.
+At `off` the CLI sends no Caveman header, so the request forwards
+byte-identical — the same thing the server does for any client that doesn't
+ask. Pass a client's own flags after `--` if they collide with `-l`.
 
 ### Running without the CLI
 

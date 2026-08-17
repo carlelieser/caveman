@@ -247,8 +247,13 @@ describe('compression level', () => {
     expect(result.code).toBe(2);
   });
 
-  it('sends off when no level was ever given', async () => {
+  it('compresses when no level was given, since asking for the CLI is the ask', async () => {
     await run(['up'], { PORT: port });
+    expect((await show([])).stdout).toContain('level=caveman');
+  });
+
+  it('still allows off explicitly, for a baseline through the same proxy', async () => {
+    await run(['up', '-l', 'off'], { PORT: port });
     expect((await show([])).stdout).toContain('level=off');
   });
 
