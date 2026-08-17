@@ -223,11 +223,12 @@ describe('X-Caveman-Scorer parsing', () => {
 });
 
 describe('CAVEMAN_HEADER_NAMES', () => {
-  it('lists exactly the three Caveman header names for stripping upstream', () => {
+  it('lists exactly the Caveman header names for stripping upstream', () => {
     expect(CAVEMAN_HEADER_NAMES).toEqual([
       'X-Caveman-Compress',
       'X-Caveman-Scope',
       'X-Caveman-Scorer',
+      'X-Caveman-Claude-Mode',
     ]);
   });
 });
