@@ -149,6 +149,28 @@ describe('classifyWords classes', () => {
     expect(classOf("I haven't tried.", "haven't")).toBe('other');
   });
 
+  it('tags a subordinator as other so no level can remove it', () => {
+    expect(classOf('Do not proceed if the tests fail.', 'if')).toBe('other');
+    expect(classOf('Retry the request unless the error is fatal.', 'unless')).toBe(
+      'other',
+    );
+    expect(classOf('Stop the process when the queue is empty.', 'when')).toBe('other');
+    expect(classOf('Skip the file because it is generated.', 'because')).toBe('other');
+    expect(classOf('Run the linter before you commit.', 'before')).toBe('other');
+    expect(classOf('Wait until the review is approved.', 'until')).toBe('other');
+    expect(classOf('Ask first, otherwise assume the default.', 'otherwise')).toBe(
+      'other',
+    );
+    expect(classOf('Fail the build although the warnings are minor.', 'although')).toBe(
+      'other',
+    );
+  });
+
+  it('tags a sentence-initial subordinator the same as a medial one', () => {
+    expect(classOf('If the tests fail, do not proceed.', 'If')).toBe('other');
+    expect(classOf('When the queue is empty, stop.', 'When')).toBe('other');
+  });
+
   it('tags a participle as a predicate when its sentence has no verb', () => {
     expect(classOf('50 requests abandoned', 'abandoned')).toBe('predicate');
     expect(classOf('the build failed', 'failed')).toBe('predicate');

@@ -31,6 +31,52 @@ const ADJECTIVE_TAG = 'Adjective';
 /** Added by `markPredicates`; compromise never emits it. */
 const PREDICATE_TAG = 'CavemanPredicate';
 
+/** Added by `markSubordinators`; compromise never emits it. */
+const SUBORDINATOR_TAG = 'CavemanSubordinator';
+
+/**
+ * Words that subordinate a clause: they mark it as a condition, a time bound, a
+ * cause, a concession, an exception, or an alternative. Dropping one shortens
+ * the sentence and changes what it claims. "Do not proceed if the tests fail"
+ * becomes "do not proceed, the tests fail", a claim that the tests failed. The
+ * saving is real; the damage is invisible beside it.
+ *
+ * This is a lexical list rather than a tag rule because compromise's tags do
+ * not separate the two uses. It tags `before` as `Conjunction` in both "proceed
+ * before the tests pass" and "the file before the directory", and it scatters
+ * the rest of the class across `Conjunction`, `Preposition`, `Adverb` and
+ * `Determiner`. Only `unless` and `lest` get their own `Condition` tag, which
+ * is why those two survived removal while the rest of the class did not.
+ *
+ * The cost of keeping a non-subordinating use — `after` in "the name comes
+ * after the colon" — is one short function word. The cost of dropping a
+ * subordinating one is the meaning of the clause, so the ambiguous case
+ * resolves to keeping, as it does everywhere else in the pipeline.
+ */
+const SUBORDINATORS: ReadonlySet<string> = new Set([
+  'if',
+  'unless',
+  'lest',
+  'whether',
+  'when',
+  'whenever',
+  'while',
+  'until',
+  'till',
+  'before',
+  'after',
+  'once',
+  'since',
+  'because',
+  'although',
+  'though',
+  'whereas',
+  'otherwise',
+  'except',
+  'despite',
+  'unlike',
+]);
+
 /**
  * Compromise's tags, mapped in priority order. Order is what makes the mapping
  * well-defined: its tags co-occur freely — a pronoun also carries `Noun`, a
@@ -42,6 +88,8 @@ const PREDICATE_TAG = 'CavemanPredicate';
  */
 const TAG_PRIORITY: readonly (readonly [string, WordClass])[] = [
   ['Negative', 'other'],
+  [SUBORDINATOR_TAG, 'other'],
+  ['Condition', 'other'],
   ['QuestionWord', 'other'],
   ['Expression', 'other'],
   ['Emoji', 'other'],
@@ -164,10 +212,26 @@ function followsANoun(terms: readonly Term[], index: number): boolean {
   return terms.slice(0, index).some((term) => classOf(term.tags) === 'noun');
 }
 
+/**
+ * Tags a term whose text is a subordinator so it resolves to `other`, which no
+ * level removes. Matching is on the lowercased text because the class is closed
+ * and its members are spelled one way; a sentence-initial `If` is the same word
+ * as a medial `if`.
+ */
+function markSubordinators(terms: readonly Term[]): Term[] {
+  return terms.map((term) =>
+    SUBORDINATORS.has(term.text.toLowerCase())
+      ? { ...term, tags: [...term.tags, SUBORDINATOR_TAG] }
+      : term,
+  );
+}
+
 function parseTerms(text: string): Term[] {
   const sentences = nlp(text).json({ terms: { tags: true } }) as SentenceJson[];
   return sentences.flatMap((sentence) =>
-    markPredicates(mergeTaglessTerms((sentence.terms ?? []).map(toTerm))),
+    markSubordinators(
+      markPredicates(mergeTaglessTerms((sentence.terms ?? []).map(toTerm))),
+    ),
   );
 }
 

@@ -181,6 +181,41 @@ describe('compressText grammatical selection', () => {
     }
   });
 
+  /**
+   * A subordinator is the word that relates one clause to another. Remove it
+   * and both clauses remain, now asserted — a different claim from the one the
+   * original made. The token count records the saving and has no way to show
+   * the loss.
+   */
+  it('never removes a subordinator', () => {
+    const cases: readonly [string, string][] = [
+      ['Do not proceed if the tests fail.', 'if'],
+      ['Retry the request unless the error is fatal.', 'unless'],
+      ['Stop the process when the queue is empty.', 'when'],
+      ['Run the linter before you commit the change.', 'before'],
+      ['Delete the branch after the pull request merges.', 'after'],
+      ['Do not deploy until the review is approved.', 'until'],
+      ['Skip the file because it is generated.', 'because'],
+      ['Fail the build although the warnings are minor.', 'although'],
+      ['Write to the log whenever a request is dropped.', 'whenever'],
+      ['Ask the user first, otherwise assume the default.', 'otherwise'],
+      ['Use the cache while the connection is alive.', 'while'],
+      ['Escalate except when the caller is an admin.', 'except'],
+    ];
+    for (const [text, keyword] of cases) {
+      for (const level of LEVELS) {
+        expect(compress(text, level)).toMatch(new RegExp(`\\b${keyword}\\b`, 'u'));
+      }
+    }
+  });
+
+  it('keeps a conditional readable as a condition at caveman', () => {
+    expect(compress('Only use emojis if the user explicitly asks.', 'caveman')).toContain(
+      'if',
+    );
+    expect(compress('If the tests fail, do not proceed.', 'caveman')).toContain('If');
+  });
+
   it('never removes a contracted negation', () => {
     const cases = ["it doesn't work", "i can't reproduce it", "that won't happen"];
     for (const text of cases) {
