@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { IrRequest } from '../src/ir/types.js';
-import { ALL_SCOPES } from '../src/ir/walk.js';
+import { ALL_SCOPES, forEachTextNode } from '../src/ir/walk.js';
 import { fromIR } from '../src/adapters/anthropic/from-ir.js';
 import { toIR } from '../src/adapters/anthropic/to-ir.js';
-import { heuristicScorer } from '../src/compression/heuristic-scorer.js';
+import type { Level } from '../src/compression/levels.js';
 import { runPipeline } from '../src/compression/pipeline.js';
 import { REQUEST_FIXTURES } from './fixtures/requests.js';
 
-const RATIOS = [0, 0.1, 0.3, 0.5, 0.7, 0.9] as const;
+const LEVELS: readonly Level[] = ['light', 'moderate', 'caveman'];
 
-function compress(request: IrRequest, ratio: number) {
-  return runPipeline({ request, ratio, scorer: heuristicScorer, scopes: ALL_SCOPES });
+function compress(request: IrRequest, level: Level) {
+  return runPipeline({ request, level, scopes: ALL_SCOPES });
 }
 
 function blocksOf(body: Record<string, unknown>): Record<string, unknown>[] {
@@ -27,9 +27,9 @@ function blocksOfKind(body: Record<string, unknown>, type: string) {
 
 describe('pipeline structural validity', () => {
   for (const fixture of REQUEST_FIXTURES) {
-    for (const ratio of RATIOS) {
-      it(`keeps ${fixture.name} structurally valid at ratio ${ratio}`, () => {
-        const compressed = fromIR(compress(toIR(fixture.body), ratio).request);
+    for (const level of LEVELS) {
+      it(`keeps ${fixture.name} structurally valid at ${level}`, () => {
+        const compressed = fromIR(compress(toIR(fixture.body), level).request);
         const original = fixture.body;
 
         expect(blocksOfKind(compressed, 'tool_use')).toEqual(
@@ -49,10 +49,10 @@ describe('pipeline structural validity', () => {
     }
   }
 
-  it('never emits an empty text block at any ratio', () => {
+  it('never emits an empty text block at any level', () => {
     for (const fixture of REQUEST_FIXTURES) {
-      for (const ratio of RATIOS) {
-        const compressed = fromIR(compress(toIR(fixture.body), ratio).request);
+      for (const level of LEVELS) {
+        const compressed = fromIR(compress(toIR(fixture.body), level).request);
         for (const block of blocksOfKind(compressed, 'text')) {
           expect(String(block['text']).trim()).not.toBe('');
         }
@@ -62,7 +62,7 @@ describe('pipeline structural validity', () => {
 
   it('preserves every tool_use_id and its pairing with the originating tool_use', () => {
     for (const fixture of REQUEST_FIXTURES) {
-      const compressed = fromIR(compress(toIR(fixture.body), 0.9).request);
+      const compressed = fromIR(compress(toIR(fixture.body), 'caveman').request);
       const resultIds = blocksOfKind(compressed, 'tool_result').map(
         (block) => block['tool_use_id'],
       );
@@ -83,25 +83,14 @@ describe('pipeline structural validity', () => {
     }
   });
 
-  it('never offers a non-text block to the scorer', () => {
+  it('never offers a non-text block to the compressor', () => {
     const offered: string[] = [];
-    const recordingScorer = {
-      name: 'recording',
-      version: '1.0.0',
-      score(spans: { text: string }[], context: { blockText: string }) {
-        offered.push(context.blockText);
-        return spans.map(() => 1);
-      },
-    };
     for (const fixture of REQUEST_FIXTURES) {
-      runPipeline({
-        request: toIR(fixture.body),
-        ratio: 0.5,
-        scorer: recordingScorer,
-        scopes: ALL_SCOPES,
+      forEachTextNode(toIR(fixture.body), ALL_SCOPES, (node) => {
+        offered.push(node.text);
       });
     }
-    // A tool_use input or a thinking signature reaching the scorer means an
+    // A tool_use input or a thinking signature reaching the compressor means an
     // opaque block became compressible.
     for (const blockText of offered) {
       expect(blockText).not.toContain('toolu_');
@@ -112,7 +101,7 @@ describe('pipeline structural validity', () => {
 
   it('keeps every tool_use input parseable as JSON', () => {
     for (const fixture of REQUEST_FIXTURES) {
-      const compressed = fromIR(compress(toIR(fixture.body), 0.9).request);
+      const compressed = fromIR(compress(toIR(fixture.body), 'caveman').request);
       for (const block of blocksOfKind(compressed, 'tool_use')) {
         expect(() => JSON.parse(JSON.stringify(block['input']))).not.toThrow();
       }
@@ -121,7 +110,7 @@ describe('pipeline structural validity', () => {
 
   it('preserves cache_control markers on their original blocks', () => {
     for (const fixture of REQUEST_FIXTURES) {
-      const compressed = fromIR(compress(toIR(fixture.body), 0.5).request);
+      const compressed = fromIR(compress(toIR(fixture.body), 'moderate').request);
       const marked = blocksOf(compressed).filter(
         (block) => block['cache_control'] !== undefined,
       );
@@ -132,16 +121,30 @@ describe('pipeline structural validity', () => {
     }
   });
 
-  it('is the identity function at ratio 0', () => {
-    for (const fixture of REQUEST_FIXTURES) {
-      expect(fromIR(compress(toIR(fixture.body), 0).request)).toEqual(fixture.body);
+  it('leaves a block of nothing but protected regions byte-identical', () => {
+    const body = {
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: '```ts\nconst value = compute(alpha, beta);\nreturn value;\n```',
+        },
+      ],
+    };
+    for (const level of LEVELS) {
+      expect(fromIR(compress(toIR(body), level).request)).toEqual(body);
     }
   });
 
   it('produces byte-identical output across repeated runs', () => {
     for (const fixture of REQUEST_FIXTURES) {
-      const first = JSON.stringify(fromIR(compress(toIR(fixture.body), 0.4).request));
-      const second = JSON.stringify(fromIR(compress(toIR(fixture.body), 0.4).request));
+      const first = JSON.stringify(
+        fromIR(compress(toIR(fixture.body), 'moderate').request),
+      );
+      const second = JSON.stringify(
+        fromIR(compress(toIR(fixture.body), 'moderate').request),
+      );
       expect(first).toBe(second);
     }
   });
@@ -159,11 +162,11 @@ describe('pipeline structural validity', () => {
         },
       ],
     };
-    const result = compress(toIR(body), 0.5);
+    const result = compress(toIR(body), 'moderate');
     expect(result.stats.nodesSeen).toBe(2);
     expect(result.stats.nodesCompressed).toBeGreaterThan(0);
     expect(result.stats.charsAfter).toBeLessThan(result.stats.charsBefore);
-    expect(result.stats.scorer).toBe('heuristic');
+    expect(result.stats.level).toBe('moderate');
   });
 
   it('only touches the scopes the policy enables', () => {
@@ -181,8 +184,7 @@ describe('pipeline structural validity', () => {
     };
     const systemOnly = runPipeline({
       request: toIR(body),
-      ratio: 0.5,
-      scorer: heuristicScorer,
+      level: 'moderate',
       scopes: ['system'],
     });
     const emitted = fromIR(systemOnly.request);
@@ -222,26 +224,26 @@ describe('cached prefixes are never compressed', () => {
   };
 
   it('leaves the block carrying cache_control untouched', () => {
-    const result = compress(toIR(cachedBody), 0.5);
+    const result = compress(toIR(cachedBody), 'moderate');
     const system = fromIR(result.request)['system'] as Record<string, unknown>[];
     expect(system[1]?.['text']).toBe(cachedBody.system[1]?.text);
   });
 
   it('leaves blocks before the breakpoint untouched', () => {
-    const result = compress(toIR(cachedBody), 0.5);
+    const result = compress(toIR(cachedBody), 'moderate');
     const system = fromIR(result.request)['system'] as Record<string, unknown>[];
     expect(system[0]?.['text']).toBe(cachedBody.system[0]?.text);
   });
 
   it('counts skipped nodes so accounting stays honest', () => {
-    const result = compress(toIR(cachedBody), 0.5);
+    const result = compress(toIR(cachedBody), 'moderate');
     // Both system blocks precede the breakpoint; the message follows it.
     expect(result.stats.nodesSkipped).toBe(2);
     expect(result.stats.nodesSeen).toBe(3);
   });
 
   it('still compresses text after the last breakpoint', () => {
-    const result = compress(toIR(cachedBody), 0.5);
+    const result = compress(toIR(cachedBody), 'moderate');
     const messages = fromIR(result.request)['messages'] as Record<string, unknown>[];
     const blocks = messages[0]?.['content'] as Record<string, unknown>[];
     expect(blocks[0]?.['text']).not.toBe(cachedBody.messages[0]?.content[0]?.text);
@@ -250,13 +252,13 @@ describe('cached prefixes are never compressed', () => {
   it('compresses everything when no block is cached', () => {
     const uncached = structuredClone(cachedBody);
     delete (uncached.system[1] as Record<string, unknown>)['cache_control'];
-    const result = compress(toIR(uncached), 0.5);
+    const result = compress(toIR(uncached), 'moderate');
     expect(result.stats.nodesSkipped).toBe(0);
     expect(result.stats.nodesCompressed).toBeGreaterThan(0);
   });
 
   it('keeps the cached prefix byte-identical through a full round-trip', () => {
-    const result = compress(toIR(cachedBody), 0.5);
+    const result = compress(toIR(cachedBody), 'moderate');
     const emitted = fromIR(result.request);
     expect(JSON.stringify(emitted['system'])).toBe(JSON.stringify(cachedBody.system));
   });

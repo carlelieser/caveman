@@ -12,8 +12,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "comment:compromise": "Pinned exactly, no caret: its lexicon decides how a word is tagged, so a patch release can change which words are dropped and therefore the bytes sent upstream.",
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "compromise": "14.16.0",
     "dotenv": "^17.4.2",
     "hono": "^4.6.14"
   },

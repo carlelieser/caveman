@@ -1,3 +1,4 @@
+import type { Level } from '../compression/levels.js';
 import type { PipelineStats } from '../compression/pipeline.js';
 
 /**
@@ -12,14 +13,14 @@ export type TokenAccounting = {
   tokensAfter: number;
   tokensSaved: number;
   ratio: number;
-  scorer: string;
+  level: Level;
 };
 
 export const ACCOUNTING_HEADER_NAMES = {
   tokensBefore: 'X-Caveman-Tokens-Before',
   tokensAfter: 'X-Caveman-Tokens-After',
   ratio: 'X-Caveman-Ratio',
-  scorer: 'X-Caveman-Scorer',
+  level: 'X-Caveman-Level',
 } as const;
 
 function estimateTokens(charCount: number): number {
@@ -44,7 +45,7 @@ export function accountFor(stats: PipelineStats): TokenAccounting {
     tokensAfter,
     tokensSaved: tokensBefore - tokensAfter,
     ratio: roundRatio(reductionRatio(tokensBefore, tokensAfter)),
-    scorer: stats.scorer,
+    level: stats.level,
   };
 }
 
@@ -59,5 +60,5 @@ export function applyAccountingHeaders(
   headers.set(ACCOUNTING_HEADER_NAMES.tokensBefore, String(accounting.tokensBefore));
   headers.set(ACCOUNTING_HEADER_NAMES.tokensAfter, String(accounting.tokensAfter));
   headers.set(ACCOUNTING_HEADER_NAMES.ratio, accounting.ratio.toFixed(4));
-  headers.set(ACCOUNTING_HEADER_NAMES.scorer, accounting.scorer);
+  headers.set(ACCOUNTING_HEADER_NAMES.level, accounting.level);
 }

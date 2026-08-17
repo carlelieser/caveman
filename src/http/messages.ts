@@ -7,7 +7,6 @@ import type { ResponseDecorator } from './upstream.js';
 import type { SavingsReporter } from '../telemetry/savings-log.js';
 import { parseCompressionPolicy } from '../policy/headers.js';
 import { accountFor, applyAccountingHeaders } from '../telemetry/accounting.js';
-import { UnknownScorerError } from './unknown-scorer-error.js';
 import {
   forwardableRequestHeaders,
   passthroughResponse,
@@ -42,10 +41,6 @@ class MalformedBodyError extends Error {
 
 function policyErrorMessage(failure: PolicyFailure): string {
   return `${failure.header}: ${failure.reason} (received "${failure.value}")`;
-}
-
-function unknownScorerMessage(error: UnknownScorerError): string {
-  return `X-Caveman-Scorer: unknown scorer "${error.requested}" (available: ${error.available.join(', ')})`;
 }
 
 function parseBody(raw: string, path: string): ProviderRequestBody {
@@ -104,13 +99,7 @@ async function forwardMessages(context: Context, route: Route): Promise<Response
     return reject(context, route, 'request body is not valid JSON');
   }
 
-  let staged: StageResult;
-  try {
-    staged = route.stage(route.adapter.toIR(body), policyResult.policy);
-  } catch (error) {
-    if (!(error instanceof UnknownScorerError)) throw error;
-    return reject(context, route, unknownScorerMessage(error));
-  }
+  const staged: StageResult = route.stage(route.adapter.toIR(body), policyResult.policy);
 
   const upstream = await sendUpstream({
     adapter: route.adapter,

@@ -92,9 +92,8 @@ describe('transparency', () => {
 
   it('forwards a body deep-equal when Caveman headers request no compression', async () => {
     const headers = {
-      'X-Caveman-Compress': '0',
+      'X-Caveman-Compress': 'off',
       'X-Caveman-Scope': 'messages,system',
-      'X-Caveman-Scorer': 'heuristic',
     };
     await app.fetch(proxyRequest(headers, SAMPLE_BODY));
 
@@ -123,9 +122,8 @@ describe('header handling', () => {
   it('strips every X-Caveman-* header before forwarding', async () => {
     const headers = {
       'x-api-key': 'sk-test',
-      'X-Caveman-Compress': '0.3',
+      'X-Caveman-Compress': 'moderate',
       'X-Caveman-Scope': 'messages',
-      'X-Caveman-Scorer': 'heuristic',
     };
     await app.fetch(proxyRequest(headers, SAMPLE_BODY));
 
