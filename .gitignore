@@ -3,3 +3,4 @@ dist
 .env
 .DS_Store
 test/fixtures/.invocation-*.json
+.claude/worktrees/
