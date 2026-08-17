@@ -170,6 +170,15 @@ describe('compressText grammatical selection', () => {
     }
   });
 
+  it('never removes a contracted negation', () => {
+    const cases = ["it doesn't work", "i can't reproduce it", "that won't happen"];
+    for (const text of cases) {
+      for (const level of LEVELS) {
+        expect(compress(text, level)).toMatch(/n't\b/u);
+      }
+    }
+  });
+
   it('keeps nouns, verbs, numbers and proper nouns at every level', () => {
     const text = 'John quickly sent the 42 large reports to Paris on Tuesday.';
     for (const level of LEVELS) {

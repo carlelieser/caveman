@@ -107,9 +107,34 @@ function classOf(tags: readonly string[]): WordClass {
   return 'other';
 }
 
+/**
+ * Compromise splits a contraction into one term per part it expands to, and
+ * only the first carries text: `doesn't` is an `Auxiliary` term followed by a
+ * text-less `Negative` one. A term with no text has no offset in the source, so
+ * its tags belong to the word that produced it.
+ */
+function mergeTaglessTerms(terms: readonly Term[]): Term[] {
+  const merged: Term[] = [];
+  for (const term of terms) {
+    const previous = merged[merged.length - 1];
+    if (term.text === '' && previous !== undefined) {
+      merged[merged.length - 1] = {
+        ...previous,
+        post: previous.post + term.pre + term.post,
+        tags: [...previous.tags, ...term.tags],
+      };
+      continue;
+    }
+    merged.push(term);
+  }
+  return merged;
+}
+
 function parseTerms(text: string): Term[] {
   const sentences = nlp(text).json({ terms: { tags: true } }) as SentenceJson[];
-  return sentences.flatMap((sentence) => (sentence.terms ?? []).map(toTerm));
+  return mergeTaglessTerms(
+    sentences.flatMap((sentence) => (sentence.terms ?? []).map(toTerm)),
+  );
 }
 
 type Cursor = { position: number };

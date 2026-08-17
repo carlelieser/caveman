@@ -139,6 +139,19 @@ describe('classifyWords classes', () => {
 
   it('tags a negation as other so no level can remove it', () => {
     expect(classOf('It did not work.', 'not')).toBe('other');
+    expect(classOf('We never saw that.', 'never')).toBe('other');
+  });
+
+  it('tags a contracted negation as other, not as the auxiliary it expands to', () => {
+    expect(classOf("It doesn't work.", "doesn't")).toBe('other');
+    expect(classOf("I can't reproduce it.", "can't")).toBe('other');
+    expect(classOf("That won't happen.", "won't")).toBe('other');
+    expect(classOf("I haven't tried.", "haven't")).toBe('other');
+  });
+
+  it('still tags an uncontracted auxiliary as an auxiliary', () => {
+    expect(classOf('It does work.', 'does')).toBe('auxiliary');
+    expect(classOf('I have tried.', 'have')).toBe('auxiliary');
   });
 
   it('disambiguates "book" by sentence context', () => {
