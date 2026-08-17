@@ -7,6 +7,7 @@ import type { CompressionStage } from './messages.js';
 import type { SavingsReporter } from '../telemetry/savings-log.js';
 import type { LogSink } from '../telemetry/logging.js';
 import { anthropicAdapter } from '../adapters/anthropic/adapter.js';
+import { HEALTH_PATH, healthBody } from './health.js';
 import { createMessagesHandler } from './messages.js';
 import { createCompressionStage } from './compression-stage.js';
 import { createLogSink } from '../telemetry/logging.js';
@@ -29,6 +30,7 @@ export function createServedApp(
   adapters: readonly ProviderAdapter[] = REGISTERED_ADAPTERS,
 ): ServedApp {
   const app = new Hono();
+  app.get(HEALTH_PATH, (context) => context.json(healthBody()));
   for (const adapter of adapters) {
     app.post(adapter.path, createMessagesHandler(adapter, stage, reporter));
   }
