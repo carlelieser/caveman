@@ -16,8 +16,36 @@ cache defaults are what they are.
 ## Quickstart
 
 ```sh
-git clone https://github.com/carlelieser/caveman.git
-cd caveman
+curl -fsSL https://raw.githubusercontent.com/carlelieser/caveman/main/install.sh | bash
+```
+
+```sh
+caveman claude
+```
+
+That starts the proxy if it is not already up and launches `claude` against it.
+Arguments pass through, so `caveman claude --resume` works.
+
+Run `install.sh` from inside a clone and it links that clone, so your edits are
+what runs.
+
+## Commands
+
+| Command                  | Does                                                  |
+| ------------------------ | ----------------------------------------------------- |
+| `caveman up`             | Start the proxy in the background                     |
+| `caveman down`           | Stop it, reporting the session savings                |
+| `caveman status`         | Say whether it is running, and on which port          |
+| `caveman <client> [...]` | Start it if needed, then launch a client              |
+
+Logs and the pid file live in `run/` under the install root. A client is a file
+in `bin/clients/`, so adding one is adding a file.
+
+### Running without the CLI
+
+The proxy is an ordinary server, and the CLI only sets these for you:
+
+```sh
 npm install
 npm start # (or `npm run dev` for development)
 ```
@@ -43,6 +71,10 @@ claude
 | Route          | Upstream                                    |
 | -------------- | ------------------------------------------- |
 | `/v1/messages` | `https://api.anthropic.com`, POST over HTTP |
+| `/health`      | none; answers `{"service":"caveman","status":"ok"}` |
+
+The `service` name is how the CLI tells Caveman apart from an unrelated process
+holding the port, so it will not start over one or stop it.
 
 ## Headers
 
@@ -106,9 +138,13 @@ src/
   adapters/anthropic/   wire format ↔ IR
   compression/          regions, classify, levels, compress, pipeline
   policy/               header parsing
-  http/                 Hono server, handler, upstream, SSE passthrough
+  http/                 Hono server, handler, upstream, SSE passthrough, health
   telemetry/            accounting, response headers, savings log, usage
   config/               .env loading
+bin/
+  caveman               the CLI entry point
+  lib/                  paths, port, health, daemon, client
+  clients/              one file per client
 ```
 
 ## Tests
