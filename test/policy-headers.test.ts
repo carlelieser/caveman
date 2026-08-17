@@ -12,8 +12,20 @@ describe('parseCompressionPolicy defaults', () => {
     if (result.ok) expect(result.policy.level).toBeNull();
   });
 
-  it('defaults scope to messages only when X-Caveman-Scope is absent', () => {
+  it('defaults scope to every member when X-Caveman-Scope is absent', () => {
     const result = parseCompressionPolicy(headersWith({}));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.policy.scope).toEqual({
+        messages: true,
+        system: true,
+        tool_results: true,
+      });
+    }
+  });
+
+  it('narrows to the named scopes when X-Caveman-Scope is present', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Scope': 'messages' }));
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.policy.scope).toEqual({
@@ -184,6 +196,49 @@ describe('X-Caveman-Scope parsing', () => {
 
 describe('CAVEMAN_HEADER_NAMES', () => {
   it('lists exactly the Caveman header names for stripping upstream', () => {
-    expect(CAVEMAN_HEADER_NAMES).toEqual(['X-Caveman-Compress', 'X-Caveman-Scope']);
+    expect(CAVEMAN_HEADER_NAMES).toEqual([
+      'X-Caveman-Compress',
+      'X-Caveman-Scope',
+      'X-Caveman-Cache',
+    ]);
+  });
+});
+
+describe('X-Caveman-Cache', () => {
+  it('defaults to ignore when the header is absent', () => {
+    const result = parseCompressionPolicy(headersWith({}));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.policy.cacheMode).toBe('ignore');
+  });
+
+  for (const mode of ['ignore', 'respect'] as const) {
+    it(`accepts "${mode}"`, () => {
+      const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Cache': mode }));
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.policy.cacheMode).toBe(mode);
+    });
+  }
+
+  it('accepts a mode in any case and with surrounding whitespace', () => {
+    const result = parseCompressionPolicy(
+      headersWith({ 'X-Caveman-Cache': ' RESPECT ' }),
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.policy.cacheMode).toBe('respect');
+  });
+
+  it('rejects an unknown mode by naming the header', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Cache': 'maybe' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.header).toBe('X-Caveman-Cache');
+      expect(result.reason).toContain('ignore, respect');
+    }
+  });
+
+  it('rejects an empty value', () => {
+    const result = parseCompressionPolicy(headersWith({ 'X-Caveman-Cache': '   ' }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.header).toBe('X-Caveman-Cache');
   });
 });

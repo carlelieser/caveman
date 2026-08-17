@@ -3,7 +3,7 @@ import type { TextNode, WalkScope } from '../ir/walk.js';
 import type { CompressContext, CompressKind, CompressRole } from './compress.js';
 import type { Level } from './levels.js';
 import { collectTextNodes, mapTextNodes } from '../ir/walk.js';
-import { compressText } from './compress.js';
+import { compressText, proseLength } from './compress.js';
 
 export type PipelineStats = {
   level: Level;
@@ -13,6 +13,8 @@ export type PipelineStats = {
   nodesSkipped: number;
   charsBefore: number;
   charsAfter: number;
+  /** Prose characters across every node seen, skipped ones included. */
+  charsProse: number;
 };
 
 export type PipelineResult = {
@@ -20,10 +22,28 @@ export type PipelineResult = {
   stats: PipelineStats;
 };
 
+/**
+ * What to do about text a `cache_control` breakpoint covers.
+ *
+ * `ignore` compresses every in-scope node wherever it sits. The compressor
+ * reads a node's text and the level, never its position, so a node has one
+ * compressed form and produces it on every turn. The prefix the cache matches
+ * on stays stable as the conversation grows.
+ *
+ * `respect` is the older rule: skip every node at or before the last
+ * breakpoint. The cached prefix stays byte-identical to the one the client sent
+ * and is never compressed. It is unstable across turns — a node compressed
+ * while it sat in the tail is skipped once a rolling breakpoint advances past
+ * it, so its bytes change and the prefix the mode protects is the one it
+ * invalidates.
+ */
+export type CacheMode = 'ignore' | 'respect';
+
 export type PipelineRequest = {
   request: IrRequest;
   level: Level;
   scopes: readonly WalkScope[];
+  cacheMode: CacheMode;
 };
 
 const DEFAULT_ROLE: CompressRole = 'user';
@@ -45,6 +65,7 @@ type Tally = {
   nodesSkipped: number;
   charsBefore: number;
   charsAfter: number;
+  charsProse: number;
 };
 
 function newTally(): Tally {
@@ -54,12 +75,17 @@ function newTally(): Tally {
     nodesSkipped: 0,
     charsBefore: 0,
     charsAfter: 0,
+    charsProse: 0,
   };
 }
 
 /**
  * Index of the last node carrying `cache_control`, or -1 when none does.
  * Everything up to and including that node is part of a cached prefix.
+ *
+ * Only consulted under `respect`. Note that a breakpoint on a non-text block —
+ * a `tool_result` or a `tool_use` — is invisible here, because the walk yields
+ * only text nodes.
  */
 function lastCacheBreakpoint(nodes: readonly TextNode[]): number {
   let last = -1;
@@ -69,12 +95,23 @@ function lastCacheBreakpoint(nodes: readonly TextNode[]): number {
   return last;
 }
 
-/** A node inside the cached prefix is returned verbatim, but still counted. */
+/** Nodes to leave verbatim, as an index bound. -1 leaves none. */
+function cachedThroughIndex(request: PipelineRequest): number {
+  if (request.cacheMode === 'ignore') return -1;
+  return lastCacheBreakpoint(collectTextNodes(request.request, request.scopes));
+}
+
+/**
+ * A node inside the cached prefix is returned verbatim, but still counted. It
+ * is classified anyway, so the prose share covers the whole request rather than
+ * only the compressible tail.
+ */
 function skipNode(node: TextNode, tally: Tally): string {
   tally.nodesSeen += 1;
   tally.nodesSkipped += 1;
   tally.charsBefore += node.text.length;
   tally.charsAfter += node.text.length;
+  tally.charsProse += proseLength(node.text);
   return node.text;
 }
 
@@ -96,6 +133,7 @@ function compressNode(node: TextNode, request: PipelineRequest, tally: Tally): s
   tally.nodesSeen += 1;
   tally.charsBefore += result.stats.charsIn;
   tally.charsAfter += text.length;
+  tally.charsProse += result.stats.charsProse;
   if (!emptied && !result.stats.isUncompressed) {
     tally.nodesCompressed += 1;
   }
@@ -107,16 +145,17 @@ function compressNode(node: TextNode, request: PipelineRequest, tally: Tally): s
  * whatever the level, so the stats describe the same nodes at every setting,
  * which is what makes one level's result comparable to another's.
  *
- * Text at or before the last `cache_control` breakpoint is left untouched.
- * Rewriting it would change the bytes the prompt cache matches on, so the whole
- * cached prefix — typically far larger than anything compression saves — would
- * be re-billed as a fresh write on every turn.
+ * Under the default `ignore` mode a breakpoint changes nothing. A cached prefix
+ * matches on its bytes being identical from one turn to the next. Compression
+ * is deterministic and reads nothing positional, so a node compressed on the
+ * turn it first appears re-renders identically for the rest of the session and
+ * the prefix settles in compressed form. The turn it first compresses costs one
+ * write of the segment it lies in, which a growing conversation was going to
+ * write anyway.
  */
 export function runPipeline(request: PipelineRequest): PipelineResult {
   const tally = newTally();
-  const cachedThrough = lastCacheBreakpoint(
-    collectTextNodes(request.request, request.scopes),
-  );
+  const cachedThrough = cachedThroughIndex(request);
   let index = -1;
   const compressed = mapTextNodes(request.request, request.scopes, (node) => {
     index += 1;
@@ -132,6 +171,7 @@ export function runPipeline(request: PipelineRequest): PipelineResult {
       nodesSkipped: tally.nodesSkipped,
       charsBefore: tally.charsBefore,
       charsAfter: tally.charsAfter,
+      charsProse: tally.charsProse,
     },
   };
 }

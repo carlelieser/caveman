@@ -18,6 +18,7 @@ export function createCompressionStage(): CompressionStage {
       request,
       level: policy.level,
       scopes: enabledScopes(policy),
+      cacheMode: policy.cacheMode,
     });
     return { request: result.request, stats: result.stats };
   };

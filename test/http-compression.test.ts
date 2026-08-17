@@ -66,8 +66,16 @@ describe('compression over HTTP', () => {
     expect(messages[0]?.content.length).toBeLessThan(VERBOSE_MESSAGE.length);
   });
 
-  it('leaves the system prompt alone under the default scope', async () => {
+  it('compresses the system prompt under the default scope', async () => {
     await app.fetch(post({ 'X-Caveman-Compress': 'moderate' }));
+    const forwarded = forwardedBody(upstream);
+    expect(String(forwarded['system']).length).toBeLessThan(VERBOSE_SYSTEM.length);
+  });
+
+  it('leaves the system prompt alone when the scope names only messages', async () => {
+    await app.fetch(
+      post({ 'X-Caveman-Compress': 'moderate', 'X-Caveman-Scope': 'messages' }),
+    );
     expect(forwardedBody(upstream)['system']).toBe(VERBOSE_SYSTEM);
   });
 

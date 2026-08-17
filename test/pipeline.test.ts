@@ -4,13 +4,14 @@ import { ALL_SCOPES, forEachTextNode } from '../src/ir/walk.js';
 import { fromIR } from '../src/adapters/anthropic/from-ir.js';
 import { toIR } from '../src/adapters/anthropic/to-ir.js';
 import type { Level } from '../src/compression/levels.js';
+import type { CacheMode } from '../src/compression/pipeline.js';
 import { runPipeline } from '../src/compression/pipeline.js';
 import { REQUEST_FIXTURES } from './fixtures/requests.js';
 
 const LEVELS: readonly Level[] = ['light', 'moderate', 'caveman'];
 
-function compress(request: IrRequest, level: Level) {
-  return runPipeline({ request, level, scopes: ALL_SCOPES });
+function compress(request: IrRequest, level: Level, cacheMode: CacheMode = 'ignore') {
+  return runPipeline({ request, level, scopes: ALL_SCOPES, cacheMode });
 }
 
 function blocksOf(body: Record<string, unknown>): Record<string, unknown>[] {
@@ -186,6 +187,7 @@ describe('pipeline structural validity', () => {
       request: toIR(body),
       level: 'moderate',
       scopes: ['system'],
+      cacheMode: 'ignore',
     });
     const emitted = fromIR(systemOnly.request);
     expect(emitted['system']).not.toBe(body.system);
@@ -233,10 +235,10 @@ describe('a node compression would empty keeps its text', () => {
 });
 
 /**
- * A cached prefix is matched on its serialized bytes, so compressing anything
- * inside it trades a small saving for re-billing the entire cached segment.
+ * Under `respect`, a cached prefix is left exactly as the client sent it. The
+ * mode is a way back to the older behaviour; the default is `ignore`.
  */
-describe('cached prefixes are never compressed', () => {
+describe('cached prefixes are never compressed under respect', () => {
   const cachedBody = {
     model: 'claude-sonnet-4-5',
     max_tokens: 1024,
@@ -262,26 +264,26 @@ describe('cached prefixes are never compressed', () => {
   };
 
   it('leaves the block carrying cache_control untouched', () => {
-    const result = compress(toIR(cachedBody), 'moderate');
+    const result = compress(toIR(cachedBody), 'moderate', 'respect');
     const system = fromIR(result.request)['system'] as Record<string, unknown>[];
     expect(system[1]?.['text']).toBe(cachedBody.system[1]?.text);
   });
 
   it('leaves blocks before the breakpoint untouched', () => {
-    const result = compress(toIR(cachedBody), 'moderate');
+    const result = compress(toIR(cachedBody), 'moderate', 'respect');
     const system = fromIR(result.request)['system'] as Record<string, unknown>[];
     expect(system[0]?.['text']).toBe(cachedBody.system[0]?.text);
   });
 
   it('counts skipped nodes so accounting stays honest', () => {
-    const result = compress(toIR(cachedBody), 'moderate');
+    const result = compress(toIR(cachedBody), 'moderate', 'respect');
     // Both system blocks precede the breakpoint; the message follows it.
     expect(result.stats.nodesSkipped).toBe(2);
     expect(result.stats.nodesSeen).toBe(3);
   });
 
   it('still compresses text after the last breakpoint', () => {
-    const result = compress(toIR(cachedBody), 'moderate');
+    const result = compress(toIR(cachedBody), 'moderate', 'respect');
     const messages = fromIR(result.request)['messages'] as Record<string, unknown>[];
     const blocks = messages[0]?.['content'] as Record<string, unknown>[];
     expect(blocks[0]?.['text']).not.toBe(cachedBody.messages[0]?.content[0]?.text);
@@ -290,14 +292,133 @@ describe('cached prefixes are never compressed', () => {
   it('compresses everything when no block is cached', () => {
     const uncached = structuredClone(cachedBody);
     delete (uncached.system[1] as Record<string, unknown>)['cache_control'];
-    const result = compress(toIR(uncached), 'moderate');
+    const result = compress(toIR(uncached), 'moderate', 'respect');
     expect(result.stats.nodesSkipped).toBe(0);
     expect(result.stats.nodesCompressed).toBeGreaterThan(0);
   });
 
   it('keeps the cached prefix byte-identical through a full round-trip', () => {
-    const result = compress(toIR(cachedBody), 'moderate');
+    const result = compress(toIR(cachedBody), 'moderate', 'respect');
     const emitted = fromIR(result.request);
     expect(JSON.stringify(emitted['system'])).toBe(JSON.stringify(cachedBody.system));
+  });
+});
+
+/**
+ * The default mode compresses a cached prefix. A prompt cache matches on its
+ * prefix bytes being identical from one turn to the next, so what these cover
+ * is the position-independence that keeps them identical.
+ */
+describe('cached prefixes are compressed under ignore', () => {
+  const cachedBody = {
+    model: 'claude-sonnet-4-5',
+    max_tokens: 1024,
+    system: [
+      {
+        type: 'text',
+        text: 'A long stable preamble that would compress well.',
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'An earlier turn that sits inside the cached prefix region.',
+          },
+        ],
+      },
+    ],
+  };
+
+  it('compresses the block carrying cache_control', () => {
+    const result = compress(toIR(cachedBody), 'moderate');
+    const system = fromIR(result.request)['system'] as Record<string, unknown>[];
+    expect(system[0]?.['text']).not.toBe(cachedBody.system[0]?.text);
+  });
+
+  it('skips nothing', () => {
+    const result = compress(toIR(cachedBody), 'moderate');
+    expect(result.stats.nodesSkipped).toBe(0);
+    expect(result.stats.nodesCompressed).toBeGreaterThan(0);
+  });
+
+  it('keeps the cache_control marker on the block it arrived on', () => {
+    const result = compress(toIR(cachedBody), 'moderate');
+    const system = fromIR(result.request)['system'] as Record<string, unknown>[];
+    expect(system[0]?.['cache_control']).toEqual({ type: 'ephemeral' });
+  });
+});
+
+/**
+ * The property the default mode rests on: a node renders the same however the
+ * breakpoints around it move. A rule that consulted position would fail these,
+ * because a rolling breakpoint advancing past a node would flip it between its
+ * compressed and original text and invalidate the prefix on that turn.
+ */
+describe('compression is independent of breakpoint placement', () => {
+  const TURNS = [
+    'Could you please tell me what the weather is like in San Francisco today?',
+    'The weather in San Francisco is currently quite foggy and rather cool.',
+    'And could you also tell me about the weather in the city of Oslo?',
+    'The weather in Oslo is very cold today with a lot of heavy snow.',
+    'Which of the two cities that we discussed is the colder one right now?',
+  ];
+
+  /** The conversation at turn `count`, with the breakpoint on its newest turn. */
+  function bodyAtTurn(count: number): Record<string, unknown> {
+    const messages = TURNS.slice(0, count).map((text, index) => ({
+      role: index % 2 === 0 ? 'user' : 'assistant',
+      content: [{ type: 'text', text }] as Record<string, unknown>[],
+    }));
+    const newest = messages[messages.length - 1];
+    if (newest !== undefined) {
+      newest.content[0] = { ...newest.content[0], cache_control: { type: 'ephemeral' } };
+    }
+    return { model: 'claude-sonnet-4-5', max_tokens: 1024, messages };
+  }
+
+  function textsAtTurn(count: number): string[] {
+    const emitted = fromIR(compress(toIR(bodyAtTurn(count)), 'moderate').request);
+    const messages = emitted['messages'] as Record<string, unknown>[];
+    return messages.map((message) => {
+      const content = message['content'] as Record<string, unknown>[];
+      return String(content[0]?.['text']);
+    });
+  }
+
+  it('renders a node identically as the breakpoint rolls past it', () => {
+    const byTurn = TURNS.map((_text, index) => textsAtTurn(index + 1));
+    for (let node = 0; node < TURNS.length; node += 1) {
+      const renderings = byTurn
+        .filter((texts) => texts.length > node)
+        .map((texts) => texts[node]);
+      expect(new Set(renderings).size).toBe(1);
+    }
+  });
+
+  it('compresses every turn rather than skipping the cached ones', () => {
+    const result = compress(toIR(bodyAtTurn(TURNS.length)), 'moderate');
+    expect(result.stats.nodesSkipped).toBe(0);
+    expect(result.stats.nodesCompressed).toBe(TURNS.length);
+  });
+
+  it('renders the same text whether one breakpoint or none is present', () => {
+    const withBreakpoint = textsAtTurn(3);
+    const bare = structuredClone(bodyAtTurn(3)) as {
+      messages: { content: Record<string, unknown>[] }[];
+    };
+    for (const message of bare.messages) {
+      delete message.content[0]?.['cache_control'];
+    }
+    const emitted = fromIR(compress(toIR(bare), 'moderate').request);
+    const messages = emitted['messages'] as Record<string, unknown>[];
+    const withoutBreakpoint = messages.map((message) => {
+      const content = message['content'] as Record<string, unknown>[];
+      return String(content[0]?.['text']);
+    });
+    expect(withoutBreakpoint).toEqual(withBreakpoint);
   });
 });
