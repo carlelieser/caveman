@@ -5,8 +5,10 @@ import type { IrRequest } from '../ir/types.js';
 import type { PipelineStats } from '../compression/pipeline.js';
 import type { ResponseDecorator } from './upstream.js';
 import type { SavingsReporter } from '../telemetry/savings-log.js';
+import type { BodyObserver } from './upstream.js';
 import { parseCompressionPolicy } from '../policy/headers.js';
 import { accountFor, applyAccountingHeaders } from '../telemetry/accounting.js';
+import { createUsageObserver } from '../telemetry/usage.js';
 import {
   forwardableRequestHeaders,
   passthroughResponse,
@@ -56,6 +58,20 @@ function accountingDecorator(stats: PipelineStats | null): ResponseDecorator {
   return (headers) => {
     if (stats === null) return;
     applyAccountingHeaders(headers, accountFor(stats));
+  };
+}
+
+/**
+ * Watches the response for the counts the provider billed and reports them once
+ * the body has been delivered. Attached even when compression is off, so an
+ * uncompressed session gives a baseline to compare against.
+ */
+function usageObserverFor(reporter: SavingsReporter | null): BodyObserver | undefined {
+  if (reporter === null) return undefined;
+  const observer = createUsageObserver();
+  return {
+    push: (chunk) => observer.push(chunk),
+    finish: () => reporter.recordUsage(observer.current()),
   };
 }
 
@@ -111,7 +127,11 @@ async function forwardMessages(context: Context, route: Route): Promise<Response
   if (staged.stats !== null) {
     route.reporter?.record(staged.stats);
   }
-  return passthroughResponse(upstream, accountingDecorator(staged.stats));
+  return passthroughResponse(
+    upstream,
+    accountingDecorator(staged.stats),
+    usageObserverFor(route.reporter),
+  );
 }
 
 /**

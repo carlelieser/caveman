@@ -83,7 +83,7 @@ describe('savings logging', () => {
     expect(Number(after)).toBeLessThan(Number(before));
     expect(lines[0]).toMatch(/-\d+\.\d%/);
     expect(lines[0]).toContain('moderate');
-    expect(lines[0]).toContain('1 node, 0 cached');
+    expect(lines[0]).toContain('1 node, 1 compressed');
   });
 
   it('writes nothing when no compression header is present', async () => {
@@ -96,11 +96,20 @@ describe('savings logging', () => {
     expect(lines).toEqual([]);
   });
 
-  it('still writes a line when the whole prefix was cached', async () => {
+  it('compresses a cached prefix by default and says so', async () => {
     await app.fetch(post(COMPRESS, fullyCachedBody()));
     expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('2 nodes, 2 compressed');
+    expect(lines[0]).not.toContain('cached');
+  });
+
+  it('names the skipped nodes when the cache mode is respect', async () => {
+    await app.fetch(
+      post({ ...COMPRESS, 'X-Caveman-Cache': 'respect' }, fullyCachedBody()),
+    );
+    expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('-0.0%');
-    expect(lines[0]).toContain('2 nodes, 2 cached');
+    expect(lines[0]).toContain('2 nodes, 2 cached, 0 compressed');
   });
 
   it('accumulates the session total across requests', async () => {

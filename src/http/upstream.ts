@@ -120,9 +120,51 @@ export async function sendUpstream(request: UpstreamRequest): Promise<Response> 
  */
 export type ResponseDecorator = (headers: Headers) => void;
 
+/**
+ * Called with each decoded chunk as it passes, and once at end of stream. It
+ * observes bytes that have already been forwarded, so it can neither delay nor
+ * alter them.
+ */
+export type BodyObserver = {
+  push(chunk: string): void;
+  finish(): void;
+};
+
+/**
+ * Copies the body through while handing each chunk to the observer. Every chunk
+ * is enqueued before it is observed, so watching costs the stream nothing: a
+ * slow or throwing observer cannot hold a chunk back from the client.
+ */
+function observeBody(
+  body: ReadableStream<Uint8Array>,
+  observer: BodyObserver,
+): ReadableStream<Uint8Array> {
+  const decoder = new TextDecoder();
+  return body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        controller.enqueue(chunk);
+        try {
+          observer.push(decoder.decode(chunk, { stream: true }));
+        } catch {
+          // Telemetry never breaks a response body.
+        }
+      },
+      flush() {
+        try {
+          observer.finish();
+        } catch {
+          // As above: the body has already been delivered in full.
+        }
+      },
+    }),
+  );
+}
+
 export function passthroughResponse(
   upstream: Response,
   decorate?: ResponseDecorator,
+  observer?: BodyObserver,
 ): Response {
   const headers = forwardableResponseHeaders(upstream.headers);
   if (isEventStream(upstream.headers)) {
@@ -130,7 +172,11 @@ export function passthroughResponse(
     headers.set('x-accel-buffering', 'no');
   }
   decorate?.(headers);
-  return new Response(upstream.body, { status: upstream.status, headers });
+  const body =
+    observer !== undefined && upstream.body !== null
+      ? observeBody(upstream.body, observer)
+      : upstream.body;
+  return new Response(body, { status: upstream.status, headers });
 }
 
 function isEventStream(headers: Headers): boolean {

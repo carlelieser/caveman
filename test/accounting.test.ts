@@ -10,6 +10,7 @@ function statsFor(charsBefore: number, charsAfter: number): PipelineStats {
     nodesSkipped: 0,
     charsBefore,
     charsAfter,
+    charsProse: charsBefore,
   };
 }
 

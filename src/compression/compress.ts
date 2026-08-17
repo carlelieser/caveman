@@ -21,6 +21,11 @@ export type CompressionStats = {
   wordsOut: number;
   charsIn: number;
   charsOut: number;
+  /**
+   * Characters in prose regions, the only ones a level can remove. This is the
+   * ceiling on what compressing this text could save.
+   */
+  charsProse: number;
   /** True when an invariant forced the original text to be returned intact. */
   isUncompressed: boolean;
 };
@@ -38,7 +43,11 @@ export type CompressRequest = {
 
 const WHITESPACE_ONLY_PATTERN = /^\s*$/u;
 
-function identityResult(text: string, wordsIn: number): CompressionResult {
+function identityResult(
+  text: string,
+  wordsIn: number,
+  charsProse: number,
+): CompressionResult {
   return {
     text,
     stats: {
@@ -46,9 +55,24 @@ function identityResult(text: string, wordsIn: number): CompressionResult {
       wordsOut: wordsIn,
       charsIn: text.length,
       charsOut: text.length,
+      charsProse,
       isUncompressed: true,
     },
   };
+}
+
+/** Total length of the prose regions, which is what classification left open. */
+function countProse(regions: readonly Region[]): number {
+  let total = 0;
+  for (const region of regions) {
+    if (region.kind === 'prose') total += region.end - region.start;
+  }
+  return total;
+}
+
+/** The prose share of a block that is not being compressed. */
+export function proseLength(text: string): number {
+  return countProse(classifyRegions(text));
 }
 
 const WHITESPACE_RUN_PATTERN = /\s+/gu;
@@ -301,9 +325,10 @@ function buildResult(
   request: CompressRequest,
   wordsIn: number,
   droppedCount: number,
+  charsProse: number,
 ): CompressionResult {
   if (isDegenerate(candidate, request.text)) {
-    return identityResult(request.text, wordsIn);
+    return identityResult(request.text, wordsIn, charsProse);
   }
   return {
     text: candidate,
@@ -312,6 +337,7 @@ function buildResult(
       wordsOut: wordsIn - droppedCount,
       charsIn: request.text.length,
       charsOut: candidate.length,
+      charsProse,
       isUncompressed: false,
     },
   };
@@ -328,18 +354,19 @@ function buildResult(
  */
 export function compressText(request: CompressRequest): CompressionResult {
   const regions = classifyRegions(request.text);
+  const charsProse = countProse(regions);
   const words = classifyWords(request.text, regions);
   const units = buildUnits(request.text, regions, words);
   const wordsIn = countWords(units);
   if (wordsIn === 0) {
-    return identityResult(request.text, wordsIn);
+    return identityResult(request.text, wordsIn, charsProse);
   }
 
   const dropped = selectDropped(units, words, request.level);
   if (dropped.size === 0) {
-    return identityResult(request.text, wordsIn);
+    return identityResult(request.text, wordsIn, charsProse);
   }
 
   const candidate = assemble({ text: request.text, units, dropped });
-  return buildResult(candidate, request, wordsIn, dropped.size);
+  return buildResult(candidate, request, wordsIn, dropped.size, charsProse);
 }
