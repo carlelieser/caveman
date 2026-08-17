@@ -93,7 +93,17 @@ images, and documents. A block type the adapter does not recognize round-trips
 verbatim as passthrough.
 
 Compression is deterministic: the same text, ratio, and scorer version produce
-identical bytes. A compressed prefix marked with `cache_control` stays cacheable.
+identical bytes.
+
+Text at or before the last `cache_control` breakpoint is never compressed. The
+prompt cache matches on the serialized request prefix, so rewriting a cached
+block trades a small saving for re-billing the whole cached segment as a fresh
+write. With a client that caches its system prompt and tools, this can leave
+little compressible on the first turn; that is the intended trade.
+
+For the same reason a forwarded request is byte-identical to the one that
+arrived, not merely equal to it: key order is preserved at every level, since
+JSON key order is insertion order and a reordered body misses the cache.
 
 ## Layout
 
