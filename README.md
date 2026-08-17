@@ -36,9 +36,9 @@ Logs live in `run/` under the install root (`~/.caveman`).
 
 ### Compression level
 
-`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman`. Give it to
+`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman` (default, most aggressive). Give it to
 `up` and every client inherits it; give it to a client and that launch alone
-uses it. The CLI defaults to `caveman`, since running it is the ask.
+uses it.
 
 ```sh
 caveman up -l moderate    # every client from now on
@@ -49,7 +49,7 @@ caveman claude -l off     # uncompressed, for a baseline
 
 At `off` the CLI sends no Caveman header, so the request forwards
 byte-identical — the same thing the server does for any client that doesn't
-ask. Pass a client's own flags after `--` if they collide with `-l`.
+ask. Pass a client's own flags after `--` if they collide with `-l`: `caveman claude -- -l debug.log`
 
 ### Running without the CLI
 
