@@ -42,6 +42,10 @@ caveman claude -l light   # this launch only
 caveman claude -l off     # uncompressed, for a baseline
 ```
 
+`--count` reports the savings in real tokens rather than characters, which is
+what you want when checking the numbers against a bill; it costs a tokenizer
+pass per request, so it is off by default.
+
 Everything after `--` goes to the client untouched, which is how you pass a flag
 the CLI would otherwise read as its own: `caveman claude -- -l debug.log`
 
@@ -107,26 +111,23 @@ claude
 
 ## Headers
 
-The CLI sets `X-Caveman-Compress` from `-l` and leaves the other two alone.
-Send them yourself to reach what the CLI does not expose.
-
-| Header               | Meaning                                            | Default   |
+| Header               | Values                                            | Default   |
 | -------------------- | -------------------------------------------------- | --------- |
 | `X-Caveman-Compress` | `off`, `light`, `moderate`, `caveman`              | `off`     |
 | `X-Caveman-Scope`    | Comma list of `messages`, `system`, `tool_results` | `messages, system, tool_results` |
 | `X-Caveman-Cache`    | `ignore` or `respect`                              | `ignore`  |
+| `X-Caveman-Count`    | `on` or `off`                                      | `off`     |
 
-The server defaults to `off` so a client that sends no header forwards
-byte-identical; the CLI defaults to `caveman`, since launching through Caveman
-is asking for compression. At `off` the CLI sends no header at all instead of
-one that means no compression.
+Compression is opt-in on the server, but CLI defaults to `caveman`.
 
 Values are case-insensitive and trimmed. A malformed value returns a 400 naming
 the header and accepted values; the request never reaches upstream.
 Caveman headers are stripped before forwarding.
 
-When compression runs, the response carries `X-Caveman-Tokens-Before`,
-`X-Caveman-Tokens-After`, `X-Caveman-Ratio`, and `X-Caveman-Level`.
+When compression runs, the response carries `X-Caveman-Chars-Before`,
+`X-Caveman-Chars-After`, `X-Caveman-Ratio` and `X-Caveman-Level`. The token
+headers, `X-Caveman-Tokens-Before` and `X-Caveman-Tokens-After`, appear only
+when counting is enabled.
 
 ### Caching
 

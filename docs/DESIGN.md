@@ -76,22 +76,17 @@ would still miss the cache.
 
 ## Counting
 
-Caveman counts what it saved before it forwards, running a real tokenizer over every block of text
-it walked (`tokens/tokens.go`). Anthropic does not publish Claude's tokenizer, so the encoding is
-cl100k_base, the BPE OpenAI ships — subword merges over UTF-8 bytes, common words as single tokens,
-whitespace bound to the word after it. The tables are compiled in and loaded once, so no request
-waits on a download. Counting adds about 7% to the walk: the corpus runs at 350k characters a
-second without it and 325k with it.
-
-Counting happens in the pipeline, not in accounting, because a token count needs the text and a
-character count has already discarded it. Tokens also do not divide across a concatenation
-boundary the way characters do, so each block is counted on its own and the totals are sums over
-the same block boundaries on both sides — which is what makes before and after comparable.
-
-The provider's own counts ride back in the response for free, and are logged on a second line. The
-two will not match: the provider bills the whole serialized request, Claude's tokenizer is not
-cl100k_base, and cache reads and cache writes are priced differently. A request can use fewer input
-tokens and still cost more, if compressing it turned a cache read into a cache write.
+Counting is opt-in, because it costs a tokenizer pass over every block on both
+sides of the compression and a chat re-tokenizes the history it re-sends every
+turn — about 20ms on a 375ms 40-turn walk, where the walk itself is the rest.
+Asked for, the count uses cl100k_base, the BPE OpenAI ships, since Anthropic
+does not publish Claude's; it is an approximation, and the provider's own
+numbers ride back on the response and are logged separately. Counting happens
+inside the pipeline rather than in accounting, because a count needs the text a
+character count has discarded, and summing per block on both sides is what makes
+before and after comparable. Off, the report is in characters, which the walk
+already tracks and which measure the same deleted words; the unit is named on
+the line. `caveman measure` counts regardless.
 
 ## Extending it
 
