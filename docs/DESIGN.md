@@ -1,196 +1,110 @@
 # Design
 
-## One representation
+Caveman is a proxy. A request comes in, it deletes words from the prose, and forwards the rest
+unchanged. Fewer words is fewer tokens, and tokens are the bill.
 
-A provider-native request converts into one internal representation, gets
-compressed, and converts back. Wire-format code lives in adapters; the
-compression pipeline knows no wire format. One adapter ships today: `anthropic`.
+## What happens to a request
 
-Dependencies point one direction: `server → compress → ir` and
-`server → adapters → ir`. Adapters and compression never import each other, so a
-second provider is a new adapter and nothing else. A test walks `go list -deps`
-and fails if either edge appears.
+The body is parsed into a provider-neutral form, and every block of text in it is compressed one at
+a time. For each block:
 
-The IR remembers enough to reproduce the wire format exactly. It is not a model
-of provider features — unmodelled fields ride along as passthrough, and key
-order is recorded per object. That matters for caching, below.
+1. Split it into regions. Anything code-shaped is protected; the rest is prose.
+2. Tag the prose for parts of speech.
+3. Delete the words whose class the level allows.
+4. Close the gaps, keeping sentence punctuation and paragraph breaks.
 
-## Two passes
+The body is then rebuilt and sent on. Nothing outside the prose is touched.
 
-The first pass splits each text block into regions and marks which ones to leave
-alone. The second classifies every word in the remaining prose and removes the
-classes the level names.
+## Regions
 
-`moderate` names determiners and prepositions, so
-"The man went to the store" loses both. The levels nest —
-`light ⊂ moderate ⊂ caveman` — which makes output length non-increasing as the
-level rises.
+Code blocks, JSON, stack traces, file paths, URLs, table rows and markdown markers are found by
+pattern and copied through untouched (`compress/regions.go`). Anything code-shaped is protected,
+because a wrong guess here costs some savings while the opposite corrupts a path or a trace the
+model needs exactly as written.
 
-Word tagging is a port of `compromise` 14.16.0. Its tags co-occur — a pronoun
-also carries `Noun`, a copula also carries `Verb` — so `tagPriority` in
-`classify.go` maps them in a fixed order and the first match wins. A word the
-classifier does not recognize resolves to `other`, which no level removes. Every
-unresolved case costs savings and never meaning.
+This decides most of the outcome. A request that is mostly a pasted diff has almost no prose to
+delete from and saves 7%; one that is all prose saves 46%. Same setting, same code.
 
-The lexicon, suffix rules, tag set and match patterns are generated into
-`internal/tagger/*.gen.go` from that exact version and committed. A lexicon
-decides how a word is tagged, so it is part of the source rather than a
-dependency that can move underneath a release.
+## Levels
 
-Two platform APIs have no direct equivalent. `Intl.Segmenter` becomes `uniseg`
-for grapheme clusters, and `\p{Extended_Pictographic}` becomes a generated range
-table — the union of that property and `Emoji_Presentation`, since the regional
-indicators that build flag sequences carry only the latter. RE2 has no
-lookaround, so the version and filename patterns are hand-rolled scans whose
-edge cases are pinned directly.
+A level is the set of word classes it may delete — the table is in the README. The sets nest, so
+raising the level never makes output longer (`compress/levels.go`). Nouns, verbs, numbers and
+proper nouns are in no level's set. `caveman`, the most aggressive, reaches adjectives and adverbs
+and stops.
 
-## Subordinators
+## Words that look deletable but are not
 
-A subordinator — `if`, `unless`, `when`, `before`, `because`, `although`,
-`otherwise` — is the word that relates one clause to another. Drop it and the
-clauses remain, now asserted: "do not proceed if the tests fail" becomes "do not
-proceed, the tests fail", which claims the tests failed. The token count records
-a saving and has no way to show the loss.
+Three rules override the class a word was tagged with (`compress/classify.go`).
 
-These are kept by list, not by tag, because the tags do not separate the two
-uses. `compromise` gives `before` the same `Conjunction` tag in "proceed before
-the tests pass" as in "the file before the directory", and scatters the rest of
-the class across `Conjunction`, `Preposition`, `Adverb` and `Determiner`. Only
-`unless` and `lest` get a `Condition` tag.
+`not` is tagged several ways at once, and the tag that wins is `Negative`, which no level deletes.
+Deleting it would reverse the sentence.
 
-Keeping a non-subordinating use costs one word. Dropping a subordinating one
-costs the meaning of a clause. Every case resolves toward keeping.
+`if`, `unless`, `because`, `before` and about fifteen others are matched by a word list rather than
+by tag, because the tagger gives `before` the same tag in "proceed before the tests pass" as in
+"the file before the directory". Delete it from the first and a condition becomes a claim: "do not
+proceed if the tests fail" turns into "do not proceed, the tests fail". Keeping the harmless case
+costs one word.
 
-## Predicate adjectives
+The tagger calls `abandoned` an adjective in both "an abandoned building" and "50 requests
+abandoned", but in the second it is the entire assertion. An adjective following a noun in a
+sentence with no verb is treated as the predicate and kept.
 
-`compromise` tags a past participle as `Adjective`, which is right for "the
-abandoned building" and wrong for "50 requests abandoned" — where the participle
-is the predication, with the copula left out. A sentence carrying no verb has
-nothing else to predicate, so an adjective following a noun in a verbless
-sentence is the one holding the assertion.
-
-Those are tagged `predicate` and survive `caveman`, where adjectives are
-otherwise removable. "connection refused" stays "connection refused".
-
-## Region protection
-
-Anything matching a protection pattern resolves to protected. Over-protecting
-costs savings; under-protecting corrupts a code block, a path, or a stack trace
-the model needs verbatim.
-
-Whole blocks are excluded before any of this runs: tool definitions,
-`tool_use.input`, `thinking` and `redacted_thinking`, images, documents, and any
-block type the adapter does not recognize. What follows applies to the text
-blocks that remain.
-
-Line-level protection runs first: fenced blocks (fence lines included, so a
-URL inside one never fragments), indented code, table rows, stack trace lines.
-An unterminated fence protects everything after it. Then inline patterns:
-backticked code, URLs, Windows and POSIX paths, dotted filenames, JSON object
-and array literals, quoted strings, XML/JSX elements, stack frame fragments, hex
-literals, UUIDs, long digit runs, version strings, snake_case identifiers,
-`$VARS`, `--flags`, and call-shaped identifiers.
-
-Markdown markers are protected as markers only. The prose after a bullet or
-header survives as a sentence and compresses.
-
-Overlapping spans merge before the gaps between them become prose regions, so
-protection never fragments, and the regions tile: reconstructing them in order
-yields the input back.
-
-Each prose region is parsed on its own, so the tagger sees whole sentences and
-can disambiguate by context — `book` is a verb in "book a flight" and a noun in
-"the book is here". Offsets are byte offsets into the original string, and every
-classified word satisfies `text[word.Start:word.End] == word.Text`.
-
-Words that fall outside grapheme cluster boundaries are dropped from the result
-instead of sliced. Their characters stay in the gap, where they are copied
-verbatim, so a ZWJ emoji sequence never splits.
-
-## Two guards
-
-A block that compresses to whitespace keeps its original text — the API rejects
-an empty text block. A candidate longer than its input is discarded for the
-original, since removal cannot lengthen text and a longer candidate means the
-assembly is at fault.
-
-Compression is deterministic: the same text at the same level produces the same
-bytes. Nothing in the path reads a clock, a random source, or a map in
-iteration order.
+The same bias runs through the rest of the pipeline. A word whose position in the source cannot be
+located exactly is left unclassified rather than guessed at. A block that compresses to nothing
+keeps its original text. A result longer than its input is thrown away. Every uncertain case is
+resolved by keeping the word, so the measured savings are a floor.
 
 ## Caching
 
-A prompt cache matches on prefix bytes being identical from one turn to the
-next. Compressing a cached prefix does not break that, under the default. The
-compressor reads a node's text and the level, never where the node sits, so each
-node has one compressed form and produces it every turn. The cached prefix
-settles in its compressed form and keeps hitting.
+Providers cache a prefix of the request and charge less when it matches, and the match is on bytes
+being identical from one turn to the next. Compression looks at a block's text and the level, never
+at where the block sits, so the same text always produces the same bytes. A block compressed on the
+turn it first appears looks identical on every later turn, and the cached prefix settles in
+compressed form (`compress/pipeline.go`). That is why compressing inside it is the default.
 
-The turn a node first compresses costs one write for the segment it lies in.
-Every conversation writes each segment once anyway: each turn extends the prefix
-and re-writes its tail. That tail is smaller compressed, as is the prefix read
-back.
+The alternative, `X-Caveman-Cache: respect`, skips blocks before the last cache breakpoint. That
+makes a block's output depend on where the breakpoint is: when it moves past a block, the block
+stops being compressed, its bytes change, and the prefix it was protecting is invalidated. It stays
+for measurement.
 
-Position-dependence is what would break it. If nodes under a breakpoint were
-skipped, a node's output would depend on where the breakpoint sits, and a
-breakpoint advancing past that node would flip its text back to the original —
-prefix changes, cache misses.
+## Fidelity
 
-`X-Caveman-Cache: respect` is exactly that: skip every node at or before the
-last breakpoint. The cached prefix stays the one that arrived, which matches a
-client that caches its system prompt and tools on every request. It carries the
-instability above, and exists to measure against the default, not to be used.
+Every request is taken apart and rebuilt, including ones that are never compressed, so the rebuild
+has to be byte-exact — key order, number literals, and fields Caveman does not model are all
+preserved (`ir/orderedjson.go`). A rebuild that reordered keys would still be a valid request, and
+would still miss the cache.
 
-For the same reason, a request that compresses to nothing new must serialize the
-way it arrived. Key order is preserved at every level — top-level, per-message,
-per-block — and string-form `content` is re-emitted as a string, never promoted
-to a block array. JSON key order is insertion order, and a reordered
-body misses the cache even when it carries identical values.
+## Counting
 
-## Accounting
+Caveman counts what it saved before it forwards, running a real tokenizer over every block of text
+it walked (`tokens/tokens.go`). Anthropic does not publish Claude's tokenizer, so the encoding is
+cl100k_base, the BPE OpenAI ships — subword merges over UTF-8 bytes, common words as single tokens,
+whitespace bound to the word after it. The tables are compiled in and loaded once, so no request
+waits on a download. Counting adds about 7% to the walk: the corpus runs at 350k characters a
+second without it and 325k with it.
 
-Response headers estimate at four bytes to the token, because measuring exactly
-would mean an upstream `count_tokens` call per request.
-`X-Caveman-Ratio` reports the reduction achieved, not the one the level asked
-for, and the headers attach even when upstream errors — so a compression-induced
-4xx arrives with the ratio that caused it.
+Counting happens in the pipeline, not in accounting, because a token count needs the text and a
+character count has already discarded it. Tokens also do not divide across a concatenation
+boundary the way characters do, so each block is counted on its own and the totals are sums over
+the same block boundaries on both sides — which is what makes before and after comparable.
 
-The billed counts are separate, read from the response body as it streams past:
-`message_start` and `message_delta` for a stream, the whole document otherwise.
-Those are the numbers the invoice is built from. Cache reads bill at a fraction
-of the base rate and cache writes at a premium, so a prefix that stopped
-matching shows up as writes replacing reads.
+The provider's own counts ride back in the response for free, and are logged on a second line. The
+two will not match: the provider bills the whole serialized request, Claude's tokenizer is not
+cl100k_base, and cache reads and cache writes are priced differently. A request can use fewer input
+tokens and still cost more, if compressing it turned a cache read into a cache write.
 
-Reading costs the stream nothing. Each chunk is written to the client and
-flushed before the observer sees it, so the first token arrives as soon as
-upstream emits it. A test gates this by holding each upstream event back until
-the client confirms the previous one, which makes buffering a hang rather than a
-slow-clock guess.
+## Extending it
 
-## What the tests assert
+A provider supplies its name, route, base URL, error shape, and conversions to and from the neutral
+form (`adapters/provider.go`). Adding one is a registry entry; no handler knows a provider by name.
+Part-of-speech tagging is a port of compromise.js 14.16.0, its lexicon and rules generated into Go
+tables — about 1.8 MB, treated as a vendored dependency. Token counting brings a second one, the
+cl100k_base BPE tables, loaded offline from `tiktoken-go`.
 
-217 test functions across 27 files, many table-driven over the recorded corpus
-in `testdata/golden/`.
+## Tests
 
-- **The recorded corpus.** Region tiling, word classification and compressed
-  output are compared span for span and byte for byte against a corpus recorded
-  from the original implementation: 69 tagger nodes, 69 region nodes, 22 unicode
-  cases, 207 compression cases.
-- **Round-trip identity.** `FromIR(ToIR(x))` re-serializes to the same *bytes*
-  as `x` for all 30 fixtures — string equality, not deep equality, so key order
-  counts.
-- **Transparency.** With no Caveman headers, the forwarded body is
-  byte-identical to what the client sent.
-- **Determinism.** Repeated runs produce identical bytes, and the same request
-  compressed twice forwards the same body.
-- **Structural validity.** Every fixture at every level keeps `tool_use` inputs
-  parseable, `thinking` blocks unchanged, `tool_use_id` pairings intact, and
-  emits no empty text block.
-- **Region protection.** Regions tile with no gaps or overlaps, and each
-  protected construct stays byte-identical at every level.
-- **Unicode safety.** Output is well-formed UTF-8, emoji sequences stay whole,
-  combining marks stay attached, and no word boundary splits a grapheme cluster.
-- **Cache behaviour.** Both modes, including a breakpoint rolling forward across
-  turns.
-- **Layering.** `go list -deps` is walked to prove compression and the adapters
-  never import each other.
+`ir/deps_test.go` shells out to `go list -deps` and fails if the neutral form imports the
+compressor, an adapter imports the tagger, or telemetry imports either. The invariants test holds
+the rest: regions tile the input exactly, words never split a grapheme cluster, compression is
+deterministic, output never grows, protected shapes come out verbatim. Golden corpora in
+`testdata/golden/` turn any change in the algorithm into a visible diff.
