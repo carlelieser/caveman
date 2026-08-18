@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":1024,"messages":[{"role":"user","content":[{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"JVBERi0xLjQKJeLjz9M="},"title":"Q3 report","context":"Financials for the quarter.","citations":{"enabled":true}},{"type":"text","text":"Summarize the document."}]}]}

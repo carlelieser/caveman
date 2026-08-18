@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":1024,"messages":[{"role":"user","content":[{"type":"quantum_foo","bar":1},{"type":"text","text":"Explain the block above."},{"type":"text","text":"Known block, unknown key.","future_block_knob":"keep me"}]}]}

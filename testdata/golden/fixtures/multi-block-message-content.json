@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":1024,"messages":[{"role":"user","content":[{"type":"text","text":"First paragraph of the question."},{"type":"text","text":"Second paragraph, with more detail."},{"type":"text","text":"Third block carrying a cache breakpoint.","cache_control":{"type":"ephemeral"}}]}]}

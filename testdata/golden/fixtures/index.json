@@ -1,0 +1,122 @@
+[
+  {
+    "name": "plain text conversation",
+    "file": "plain-text-conversation.json"
+  },
+  {
+    "name": "string-form system",
+    "file": "string-form-system.json"
+  },
+  {
+    "name": "array-form system with cache_control",
+    "file": "array-form-system-with-cache-control.json"
+  },
+  {
+    "name": "string-form message content",
+    "file": "string-form-message-content.json"
+  },
+  {
+    "name": "multi-block message content",
+    "file": "multi-block-message-content.json"
+  },
+  {
+    "name": "tool_use with matching tool_result",
+    "file": "tool-use-with-matching-tool-result.json"
+  },
+  {
+    "name": "tool_result with array content and is_error",
+    "file": "tool-result-with-array-content-and-is-error.json"
+  },
+  {
+    "name": "thinking and redacted_thinking blocks",
+    "file": "thinking-and-redacted-thinking-blocks.json"
+  },
+  {
+    "name": "image blocks with base64 and url sources",
+    "file": "image-blocks-with-base64-and-url-sources.json"
+  },
+  {
+    "name": "document block",
+    "file": "document-block.json"
+  },
+  {
+    "name": "unknown future block type",
+    "file": "unknown-future-block-type.json"
+  },
+  {
+    "name": "unknown top-level field",
+    "file": "unknown-top-level-field.json"
+  },
+  {
+    "name": "all optional sampling params",
+    "file": "all-optional-sampling-params.json"
+  },
+  {
+    "name": "custom tools plus a server tool",
+    "file": "custom-tools-plus-a-server-tool.json"
+  },
+  {
+    "name": "empty tools array",
+    "file": "empty-tools-array.json"
+  },
+  {
+    "name": "unknown key on a message object",
+    "file": "unknown-key-on-a-message-object.json"
+  },
+  {
+    "name": "client key order with cached prefix",
+    "file": "client-key-order-with-cached-prefix.json"
+  },
+  {
+    "name": "beginner rambling about a react state bug",
+    "file": "beginner-rambling-about-a-react-state-bug.json"
+  },
+  {
+    "name": "formal bug report with stack trace and package manifest",
+    "file": "formal-bug-report-with-stack-trace-and-package-manifest.json"
+  },
+  {
+    "name": "terse expert asking about a postgres plan",
+    "file": "terse-expert-asking-about-a-postgres-plan.json"
+  },
+  {
+    "name": "long support-agent system prompt with a casual question",
+    "file": "long-support-agent-system-prompt-with-a-casual-question.json"
+  },
+  {
+    "name": "six-turn debugging conversation that goes sideways",
+    "file": "six-turn-debugging-conversation-that-goes-sideways.json"
+  },
+  {
+    "name": "tool conversation with a large json tool_result",
+    "file": "tool-conversation-with-a-large-json-tool-result.json"
+  },
+  {
+    "name": "tool conversation with a wall of log output",
+    "file": "tool-conversation-with-a-wall-of-log-output.json"
+  },
+  {
+    "name": "code review request that is mostly a pasted diff",
+    "file": "code-review-request-that-is-mostly-a-pasted-diff.json"
+  },
+  {
+    "name": "casual one-liner with a pasted link",
+    "file": "casual-one-liner-with-a-pasted-link.json"
+  },
+  {
+    "name": "dense prose with no code at all",
+    "file": "dense-prose-with-no-code-at-all.json"
+  },
+  {
+    "name": "migration planning with a cached repo-context prefix",
+    "file": "migration-planning-with-a-cached-repo-context-prefix.json"
+  },
+  {
+    "name": "long meandering devops question with a compose file",
+    "file": "long-meandering-devops-question-with-a-compose-file.json"
+  },
+  {
+    "name": "four-turn api design discussion with mixed prose and snippets",
+    "file": "four-turn-api-design-discussion-with-mixed-prose-and-snippets.json"
+  }
+]

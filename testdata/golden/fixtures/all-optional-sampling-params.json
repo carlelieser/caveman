@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":1024,"temperature":0.7,"top_p":0.95,"top_k":40,"stop_sequences":["\n\nHuman:","END"],"stream":false,"service_tier":"auto","metadata":{"user_id":"user_abc123"},"messages":[{"role":"user","content":[{"type":"text","text":"Generate something."}]}]}

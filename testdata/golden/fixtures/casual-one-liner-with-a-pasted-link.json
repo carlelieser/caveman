@@ -1,0 +1,1 @@
+{"model":"claude-sonnet-4-5","max_tokens":1024,"messages":[{"role":"user","content":"is this still the right way to do it or is it outdated https://blog.example.com/posts/2019/managing-secrets-in-ci ? my teammate sent it to me but its from 2019 adn we're on github actions now not travis"}]}

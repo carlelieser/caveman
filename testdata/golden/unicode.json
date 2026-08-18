@@ -1,0 +1,1894 @@
+[
+  {
+    "id": "zwj-family",
+    "text": "The family 👨‍👩‍👧‍👦 was very happy about the result.",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 55
+      }
+    ],
+    "proseLength": 55,
+    "words": [
+      {
+        "text": "The",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "family",
+        "start": 4,
+        "end": 10,
+        "wordClass": "noun"
+      },
+      {
+        "text": "was",
+        "start": 23,
+        "end": 26,
+        "wordClass": "copula"
+      },
+      {
+        "text": "very",
+        "start": 27,
+        "end": 31,
+        "wordClass": "adverb"
+      },
+      {
+        "text": "happy",
+        "start": 32,
+        "end": 37,
+        "wordClass": "adjective"
+      },
+      {
+        "text": "about",
+        "start": 38,
+        "end": 43,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 44,
+        "end": 47,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "result",
+        "start": 48,
+        "end": 54,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "family 👨‍👩‍👧‍👦 was very happy about result.",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 6,
+          "charsIn": 55,
+          "charsOut": 47,
+          "charsProse": 55,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "family👨‍👩‍👧‍👦 very happy result.",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 4,
+          "charsIn": 55,
+          "charsOut": 36,
+          "charsProse": 55,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "family👨‍👩‍👧‍👦 result.",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 2,
+          "charsIn": 55,
+          "charsOut": 25,
+          "charsProse": 55,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "zwj-family-adjacent",
+    "text": "the 👨‍👩‍👧‍👦, and a dog",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 26
+      }
+    ],
+    "proseLength": 26,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "and",
+        "start": 17,
+        "end": 20,
+        "wordClass": "conjunction"
+      },
+      {
+        "text": "a",
+        "start": 21,
+        "end": 22,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "dog",
+        "start": 23,
+        "end": 26,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "👨‍👩‍👧‍👦, and dog",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 2,
+          "charsIn": 26,
+          "charsOut": 20,
+          "charsProse": 26,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "👨‍👩‍👧‍👦, dog",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 1,
+          "charsIn": 26,
+          "charsOut": 16,
+          "charsProse": 26,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "👨‍👩‍👧‍👦, dog",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 1,
+          "charsIn": 26,
+          "charsOut": 16,
+          "charsProse": 26,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "emoji-after-dropped-word",
+    "text": "it is a 🎉 party",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 16
+      }
+    ],
+    "proseLength": 16,
+    "words": [
+      {
+        "text": "it",
+        "start": 0,
+        "end": 2,
+        "wordClass": "pronoun"
+      },
+      {
+        "text": "is",
+        "start": 3,
+        "end": 5,
+        "wordClass": "copula"
+      },
+      {
+        "text": "a",
+        "start": 6,
+        "end": 7,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "🎉",
+        "start": 8,
+        "end": 10,
+        "wordClass": "other"
+      },
+      {
+        "text": "party",
+        "start": 11,
+        "end": 16,
+        "wordClass": "verb"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "it is 🎉 party",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 16,
+          "charsOut": 14,
+          "charsProse": 16,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "🎉 party",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 2,
+          "charsIn": 16,
+          "charsOut": 8,
+          "charsProse": 16,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "🎉 party",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 2,
+          "charsIn": 16,
+          "charsOut": 8,
+          "charsProse": 16,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "emoji-only",
+    "text": "🎉🎊✨",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 5
+      }
+    ],
+    "proseLength": 5,
+    "words": [
+      {
+        "text": "🎉🎊✨",
+        "start": 0,
+        "end": 5,
+        "wordClass": "other"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "🎉🎊✨",
+        "stats": {
+          "wordsIn": 1,
+          "wordsOut": 1,
+          "charsIn": 5,
+          "charsOut": 5,
+          "charsProse": 5,
+          "isUncompressed": true
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "🎉🎊✨",
+        "stats": {
+          "wordsIn": 1,
+          "wordsOut": 1,
+          "charsIn": 5,
+          "charsOut": 5,
+          "charsProse": 5,
+          "isUncompressed": true
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "🎉🎊✨",
+        "stats": {
+          "wordsIn": 1,
+          "wordsOut": 1,
+          "charsIn": 5,
+          "charsOut": 5,
+          "charsProse": 5,
+          "isUncompressed": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "skin-tone",
+    "text": "the developer 👩🏽‍💻 quickly fixed the bug",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 43
+      }
+    ],
+    "proseLength": 43,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "developer",
+        "start": 4,
+        "end": 13,
+        "wordClass": "noun"
+      },
+      {
+        "text": "quickly",
+        "start": 22,
+        "end": 29,
+        "wordClass": "adverb"
+      },
+      {
+        "text": "fixed",
+        "start": 30,
+        "end": 35,
+        "wordClass": "verb"
+      },
+      {
+        "text": "the",
+        "start": 36,
+        "end": 39,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "bug",
+        "start": 40,
+        "end": 43,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "developer 👩🏽‍💻 quickly fixed bug",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 4,
+          "charsIn": 43,
+          "charsOut": 35,
+          "charsProse": 43,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "developer 👩🏽‍💻 quickly fixed bug",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 4,
+          "charsIn": 43,
+          "charsOut": 35,
+          "charsProse": 43,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "developer👩🏽‍💻 fixed bug",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 3,
+          "charsIn": 43,
+          "charsOut": 26,
+          "charsProse": 43,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "flag-sequence",
+    "text": "the flag 🇯🇵 is red and white",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 30
+      }
+    ],
+    "proseLength": 30,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "flag",
+        "start": 4,
+        "end": 8,
+        "wordClass": "noun"
+      },
+      {
+        "text": "🇯🇵",
+        "start": 9,
+        "end": 13,
+        "wordClass": "other"
+      },
+      {
+        "text": "is",
+        "start": 14,
+        "end": 16,
+        "wordClass": "copula"
+      },
+      {
+        "text": "red",
+        "start": 17,
+        "end": 20,
+        "wordClass": "adjective"
+      },
+      {
+        "text": "and",
+        "start": 21,
+        "end": 24,
+        "wordClass": "conjunction"
+      },
+      {
+        "text": "white",
+        "start": 25,
+        "end": 30,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "flag 🇯🇵 is red and white",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 6,
+          "charsIn": 30,
+          "charsOut": 26,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "flag 🇯🇵 red white",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 4,
+          "charsIn": 30,
+          "charsOut": 19,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "flag 🇯🇵",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 2,
+          "charsIn": 30,
+          "charsOut": 9,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "keycap",
+    "text": "press the 1️⃣ key on the keyboard",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 33
+      }
+    ],
+    "proseLength": 33,
+    "words": [
+      {
+        "text": "press",
+        "start": 0,
+        "end": 5,
+        "wordClass": "verb"
+      },
+      {
+        "text": "the",
+        "start": 6,
+        "end": 9,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "key",
+        "start": 14,
+        "end": 17,
+        "wordClass": "verb"
+      },
+      {
+        "text": "on",
+        "start": 18,
+        "end": 20,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 21,
+        "end": 24,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "keyboard",
+        "start": 25,
+        "end": 33,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "press1️⃣ key on keyboard",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 4,
+          "charsIn": 33,
+          "charsOut": 24,
+          "charsProse": 33,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "press1️⃣ key keyboard",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 3,
+          "charsIn": 33,
+          "charsOut": 21,
+          "charsProse": 33,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "press1️⃣ key keyboard",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 3,
+          "charsIn": 33,
+          "charsOut": 21,
+          "charsProse": 33,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "variation-selector",
+    "text": "the ❤️ was in the message",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 25
+      }
+    ],
+    "proseLength": 25,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "❤️",
+        "start": 4,
+        "end": 6,
+        "wordClass": "other"
+      },
+      {
+        "text": "was",
+        "start": 7,
+        "end": 10,
+        "wordClass": "copula"
+      },
+      {
+        "text": "in",
+        "start": 11,
+        "end": 13,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 14,
+        "end": 17,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "message",
+        "start": 18,
+        "end": 25,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "❤️ was in message",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 4,
+          "charsIn": 25,
+          "charsOut": 17,
+          "charsProse": 25,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "❤️ message",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 2,
+          "charsIn": 25,
+          "charsOut": 10,
+          "charsProse": 25,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "❤️ message",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 2,
+          "charsIn": 25,
+          "charsOut": 10,
+          "charsProse": 25,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "combining-accent",
+    "text": "the café was quite busy",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 23
+      }
+    ],
+    "proseLength": 23,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "café",
+        "start": 4,
+        "end": 8,
+        "wordClass": "noun"
+      },
+      {
+        "text": "was",
+        "start": 9,
+        "end": 12,
+        "wordClass": "copula"
+      },
+      {
+        "text": "quite",
+        "start": 13,
+        "end": 18,
+        "wordClass": "adverb"
+      },
+      {
+        "text": "busy",
+        "start": 19,
+        "end": 23,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "café was quite busy",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 23,
+          "charsOut": 19,
+          "charsProse": 23,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "café quite busy",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 23,
+          "charsOut": 15,
+          "charsProse": 23,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "café",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 1,
+          "charsIn": 23,
+          "charsOut": 4,
+          "charsProse": 23,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "combining-decomposed",
+    "text": "the café was quite busy",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 24
+      }
+    ],
+    "proseLength": 24,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "was",
+        "start": 10,
+        "end": 13,
+        "wordClass": "copula"
+      },
+      {
+        "text": "quite",
+        "start": 14,
+        "end": 19,
+        "wordClass": "adverb"
+      },
+      {
+        "text": "busy",
+        "start": 20,
+        "end": 24,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "café was quite busy",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 20,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "café quite busy",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 2,
+          "charsIn": 24,
+          "charsOut": 16,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "café ",
+        "stats": {
+          "wordsIn": 4,
+          "wordsOut": 0,
+          "charsIn": 24,
+          "charsOut": 6,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "cjk-han",
+    "text": "the 日本語 text is in the file",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 27
+      }
+    ],
+    "proseLength": 27,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "日本語",
+        "start": 4,
+        "end": 7,
+        "wordClass": "noun"
+      },
+      {
+        "text": "text",
+        "start": 8,
+        "end": 12,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 13,
+        "end": 15,
+        "wordClass": "copula"
+      },
+      {
+        "text": "in",
+        "start": 16,
+        "end": 18,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 19,
+        "end": 22,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "file",
+        "start": 23,
+        "end": 27,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "日本語 text is in file",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 5,
+          "charsIn": 27,
+          "charsOut": 19,
+          "charsProse": 27,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "日本語 text file",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 3,
+          "charsIn": 27,
+          "charsOut": 13,
+          "charsProse": 27,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "日本語 text file",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 3,
+          "charsIn": 27,
+          "charsOut": 13,
+          "charsProse": 27,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "cjk-mixed",
+    "text": "这是 a test of the mixed script handling",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 38
+      }
+    ],
+    "proseLength": 38,
+    "words": [
+      {
+        "text": "这是",
+        "start": 0,
+        "end": 2,
+        "wordClass": "noun"
+      },
+      {
+        "text": "a",
+        "start": 3,
+        "end": 4,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "test",
+        "start": 5,
+        "end": 9,
+        "wordClass": "noun"
+      },
+      {
+        "text": "of",
+        "start": 10,
+        "end": 12,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 13,
+        "end": 16,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "mixed",
+        "start": 17,
+        "end": 22,
+        "wordClass": "predicate"
+      },
+      {
+        "text": "script",
+        "start": 23,
+        "end": 29,
+        "wordClass": "noun"
+      },
+      {
+        "text": "handling",
+        "start": 30,
+        "end": 38,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "这是 test of mixed script handling",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 6,
+          "charsIn": 38,
+          "charsOut": 32,
+          "charsProse": 38,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "这是 test mixed script handling",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 5,
+          "charsIn": 38,
+          "charsOut": 29,
+          "charsProse": 38,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "这是 test mixed script handling",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 5,
+          "charsIn": 38,
+          "charsOut": 29,
+          "charsProse": 38,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "hiragana",
+    "text": "the ひらがな characters were parsed",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 31
+      }
+    ],
+    "proseLength": 31,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "ひらがな",
+        "start": 4,
+        "end": 8,
+        "wordClass": "noun"
+      },
+      {
+        "text": "characters",
+        "start": 9,
+        "end": 19,
+        "wordClass": "noun"
+      },
+      {
+        "text": "were",
+        "start": 20,
+        "end": 24,
+        "wordClass": "copula"
+      },
+      {
+        "text": "parsed",
+        "start": 25,
+        "end": 31,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "ひらがな characters were parsed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 31,
+          "charsOut": 27,
+          "charsProse": 31,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "ひらがな characters parsed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 31,
+          "charsOut": 22,
+          "charsProse": 31,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "ひらがな characters parsed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 31,
+          "charsOut": 22,
+          "charsProse": 31,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "hangul",
+    "text": "the 한국어 string was empty",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 24
+      }
+    ],
+    "proseLength": 24,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "한국어",
+        "start": 4,
+        "end": 7,
+        "wordClass": "noun"
+      },
+      {
+        "text": "string",
+        "start": 8,
+        "end": 14,
+        "wordClass": "noun"
+      },
+      {
+        "text": "was",
+        "start": 15,
+        "end": 18,
+        "wordClass": "copula"
+      },
+      {
+        "text": "empty",
+        "start": 19,
+        "end": 24,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "한국어 string was empty",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 24,
+          "charsOut": 20,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "한국어 string empty",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 16,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "한국어 string",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 2,
+          "charsIn": 24,
+          "charsOut": 10,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "thai",
+    "text": "the ภาษาไทย value is set",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 24
+      }
+    ],
+    "proseLength": 24,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "ภาษาไทย",
+        "start": 4,
+        "end": 11,
+        "wordClass": "noun"
+      },
+      {
+        "text": "value",
+        "start": 12,
+        "end": 17,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 18,
+        "end": 20,
+        "wordClass": "copula"
+      },
+      {
+        "text": "set",
+        "start": 21,
+        "end": 24,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "ภาษาไทย value is set",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 24,
+          "charsOut": 20,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "ภาษาไทย value set",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 17,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "ภาษาไทย value set",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 17,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "rtl-arabic",
+    "text": "the العربية text was reversed",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 29
+      }
+    ],
+    "proseLength": 29,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "العربية",
+        "start": 4,
+        "end": 11,
+        "wordClass": "noun"
+      },
+      {
+        "text": "text",
+        "start": 12,
+        "end": 16,
+        "wordClass": "noun"
+      },
+      {
+        "text": "was",
+        "start": 17,
+        "end": 20,
+        "wordClass": "copula"
+      },
+      {
+        "text": "reversed",
+        "start": 21,
+        "end": 29,
+        "wordClass": "verb"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "العربية text was reversed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 4,
+          "charsIn": 29,
+          "charsOut": 25,
+          "charsProse": 29,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "العربية text reversed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 29,
+          "charsOut": 21,
+          "charsProse": 29,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "العربية text reversed",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 29,
+          "charsOut": 21,
+          "charsProse": 29,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "nbsp",
+    "text": "the value is a number",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 21
+      }
+    ],
+    "proseLength": 21,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "value",
+        "start": 4,
+        "end": 9,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 10,
+        "end": 12,
+        "wordClass": "copula"
+      },
+      {
+        "text": "a",
+        "start": 13,
+        "end": 14,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "number",
+        "start": 15,
+        "end": 21,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "value is number",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 3,
+          "charsIn": 21,
+          "charsOut": 15,
+          "charsProse": 21,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "value number",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 2,
+          "charsIn": 21,
+          "charsOut": 12,
+          "charsProse": 21,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "value number",
+        "stats": {
+          "wordsIn": 5,
+          "wordsOut": 2,
+          "charsIn": 21,
+          "charsOut": 12,
+          "charsProse": 21,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "emdash-unspaced",
+    "text": "the value—a number—was wrong",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 28
+      }
+    ],
+    "proseLength": 28,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "value",
+        "start": 4,
+        "end": 9,
+        "wordClass": "noun"
+      },
+      {
+        "text": "a",
+        "start": 10,
+        "end": 11,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "number",
+        "start": 12,
+        "end": 18,
+        "wordClass": "noun"
+      },
+      {
+        "text": "was",
+        "start": 19,
+        "end": 22,
+        "wordClass": "copula"
+      },
+      {
+        "text": "wrong",
+        "start": 23,
+        "end": 28,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "value number—was wrong",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 4,
+          "charsIn": 28,
+          "charsOut": 22,
+          "charsProse": 28,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "value number wrong",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 3,
+          "charsIn": 28,
+          "charsOut": 18,
+          "charsProse": 28,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "value number",
+        "stats": {
+          "wordsIn": 6,
+          "wordsOut": 2,
+          "charsIn": 28,
+          "charsOut": 12,
+          "charsProse": 28,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "zero-width-space",
+    "text": "the​value is set",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 16
+      }
+    ],
+    "proseLength": 16,
+    "words": [
+      {
+        "text": "the​value",
+        "start": 0,
+        "end": 9,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 10,
+        "end": 12,
+        "wordClass": "copula"
+      },
+      {
+        "text": "set",
+        "start": 13,
+        "end": 16,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "the​value is set",
+        "stats": {
+          "wordsIn": 3,
+          "wordsOut": 3,
+          "charsIn": 16,
+          "charsOut": 16,
+          "charsProse": 16,
+          "isUncompressed": true
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "the​value set",
+        "stats": {
+          "wordsIn": 3,
+          "wordsOut": 2,
+          "charsIn": 16,
+          "charsOut": 13,
+          "charsProse": 16,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "the​value set",
+        "stats": {
+          "wordsIn": 3,
+          "wordsOut": 2,
+          "charsIn": 16,
+          "charsOut": 13,
+          "charsProse": 16,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "emoji-punct-boundary",
+    "text": "is the build green? 🎉 yes it is",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 32
+      }
+    ],
+    "proseLength": 32,
+    "words": [
+      {
+        "text": "is",
+        "start": 0,
+        "end": 2,
+        "wordClass": "copula"
+      },
+      {
+        "text": "the",
+        "start": 3,
+        "end": 6,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "build",
+        "start": 7,
+        "end": 12,
+        "wordClass": "noun"
+      },
+      {
+        "text": "green",
+        "start": 13,
+        "end": 18,
+        "wordClass": "adjective"
+      },
+      {
+        "text": "🎉",
+        "start": 20,
+        "end": 22,
+        "wordClass": "other"
+      },
+      {
+        "text": "yes",
+        "start": 23,
+        "end": 26,
+        "wordClass": "other"
+      },
+      {
+        "text": "it",
+        "start": 27,
+        "end": 29,
+        "wordClass": "pronoun"
+      },
+      {
+        "text": "is",
+        "start": 30,
+        "end": 32,
+        "wordClass": "copula"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "is build green? 🎉 yes it is",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 7,
+          "charsIn": 32,
+          "charsOut": 28,
+          "charsProse": 32,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "build green? 🎉 yes",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 4,
+          "charsIn": 32,
+          "charsOut": 19,
+          "charsProse": 32,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "build? 🎉 yes",
+        "stats": {
+          "wordsIn": 8,
+          "wordsOut": 3,
+          "charsIn": 32,
+          "charsOut": 13,
+          "charsProse": 32,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "math-symbols",
+    "text": "the ∑ of the values is ∞",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 24
+      }
+    ],
+    "proseLength": 24,
+    "words": [
+      {
+        "text": "the",
+        "start": 0,
+        "end": 3,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "∑",
+        "start": 4,
+        "end": 5,
+        "wordClass": "noun"
+      },
+      {
+        "text": "of",
+        "start": 6,
+        "end": 8,
+        "wordClass": "preposition"
+      },
+      {
+        "text": "the",
+        "start": 9,
+        "end": 12,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "values",
+        "start": 13,
+        "end": 19,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 20,
+        "end": 22,
+        "wordClass": "copula"
+      },
+      {
+        "text": "∞",
+        "start": 23,
+        "end": 24,
+        "wordClass": "noun"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "∑ of values is ∞",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 5,
+          "charsIn": 24,
+          "charsOut": 16,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "∑ values ∞",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 10,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "∑ values ∞",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 3,
+          "charsIn": 24,
+          "charsOut": 10,
+          "charsProse": 24,
+          "isUncompressed": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "mixed-emoji-code",
+    "text": "run `npm test` 🎉 and the suite is green",
+    "regions": [
+      {
+        "kind": "prose",
+        "start": 0,
+        "end": 4
+      },
+      {
+        "kind": "protected",
+        "start": 4,
+        "end": 14
+      },
+      {
+        "kind": "prose",
+        "start": 14,
+        "end": 40
+      }
+    ],
+    "proseLength": 30,
+    "words": [
+      {
+        "text": "run",
+        "start": 0,
+        "end": 3,
+        "wordClass": "verb"
+      },
+      {
+        "text": " 🎉",
+        "start": 14,
+        "end": 17,
+        "wordClass": "noun"
+      },
+      {
+        "text": "and",
+        "start": 18,
+        "end": 21,
+        "wordClass": "conjunction"
+      },
+      {
+        "text": "the",
+        "start": 22,
+        "end": 25,
+        "wordClass": "determiner"
+      },
+      {
+        "text": "suite",
+        "start": 26,
+        "end": 31,
+        "wordClass": "noun"
+      },
+      {
+        "text": "is",
+        "start": 32,
+        "end": 34,
+        "wordClass": "copula"
+      },
+      {
+        "text": "green",
+        "start": 35,
+        "end": 40,
+        "wordClass": "adjective"
+      }
+    ],
+    "levels": [
+      {
+        "level": "light",
+        "out": "run `npm test` 🎉 and suite is green",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 6,
+          "charsIn": 40,
+          "charsOut": 36,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "moderate",
+        "out": "run `npm test` 🎉 suite green",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 4,
+          "charsIn": 40,
+          "charsOut": 29,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      },
+      {
+        "level": "caveman",
+        "out": "run `npm test` 🎉 suite",
+        "stats": {
+          "wordsIn": 7,
+          "wordsOut": 3,
+          "charsIn": 40,
+          "charsOut": 23,
+          "charsProse": 30,
+          "isUncompressed": false
+        }
+      }
+    ]
+  }
+]
