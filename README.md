@@ -31,8 +31,8 @@ caveman claude
 
 ### Levels
 
-`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman` — the
-default, and the most aggressive. Give it to `up` and every client inherits it;
+`-l` (or `--level`) takes `off`, `light`, `moderate`, or `caveman`, the
+default and most aggressive. Give it to `up` and every client inherits it;
 give it to a client and that launch alone uses it.
 
 ```sh
@@ -117,8 +117,8 @@ Send them yourself to reach what the CLI does not expose.
 
 The server defaults to `off` so a client that sends no header forwards
 byte-identical; the CLI defaults to `caveman`, since launching through Caveman
-is asking for compression. At `off` the CLI sends no header at all rather than
-one meaning "do nothing".
+is asking for compression. At `off` the CLI sends no header at all instead of
+one that means no compression.
 
 Values are case-insensitive and trimmed. A malformed value returns a 400 naming
 the header and accepted values; the request never reaches upstream.
@@ -178,13 +178,8 @@ testdata/golden/ the recorded corpus the tests gate against
 go test ./...
 ```
 
-Compression is gated against recorded output in `testdata/golden/`. A change
-there fails those gates by design, naming every case that moved. If the new
-output is correct, record it and review the diff as part of the change:
+Compression is tested against JSON files in `testdata/golden/` to prevent regressions in the algorithm. If the algorithm improves, tests will fail, in which case goldens should be regenerated:
 
 ```sh
 go test ./internal/compress/ -update
 ```
-
-Inputs are never rewritten, and the property tests in `invariants_test.go` are
-not regenerable — a change that breaks one is wrong rather than new.
