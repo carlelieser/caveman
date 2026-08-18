@@ -45,6 +45,11 @@ caveman claude -l off     # uncompressed, for a baseline
 Everything after `--` goes to the client untouched, which is how you pass a flag
 the CLI would otherwise read as its own: `caveman claude -- -l debug.log`
 
+`claude` is built in. To add another, put an executable at
+`$CAVEMAN_CLIENT_DIR/<name>` (default `$CAVEMAN_HOME/clients`); it runs with
+`CAVEMAN_BASE_URL`, `CAVEMAN_LEVEL` and `CAVEMAN_COMPRESS_HEADER` set, and a
+file there shadows a built-in of the same name.
+
 | Level      | Removes                                                      | "The man has quickly gone to the very large store" |
 | ---------- | ------------------------------------------------------------ | -------------------------------------------------- |
 | `light`    | determiners                                                  | "man has quickly gone to very large store"         |

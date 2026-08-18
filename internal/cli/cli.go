@@ -50,6 +50,11 @@ func New(config Config) *CLI {
 	return cli
 }
 
+// Version is stamped at build time with -ldflags "-X ...cli.Version=<tag>". A
+// binary built any other way reports "dev", which is how a release artifact is
+// told apart from a local build when someone reports a bug.
+var Version = "dev"
+
 func (c *CLI) environ() []string { return c.env }
 
 func (c *CLI) usage(out func(string, ...any)) {
@@ -61,6 +66,7 @@ func (c *CLI) usage(out func(string, ...any)) {
 	out("  caveman status                report whether the proxy is running")
 	out("  caveman <client> [-l LEVEL]   start the proxy, then launch a client")
 	out("  caveman measure [--performance]  report savings over the recorded corpus")
+	out("  caveman version               report the build version")
 	out("")
 	out("  -l, --level LEVEL       %s (default %s)", LevelList(), DefaultLevel)
 	out("                          a level given to up is inherited by clients")
@@ -140,6 +146,9 @@ func (c *CLI) dispatch(argv []string) *exitError {
 			return failure
 		}
 		return c.reportStatus(port, baseURL, c.paths.resolveLevel(parsedArgs.level))
+	case "version", "--version", "-v":
+		c.streams.say("caveman %s", Version)
+		return nil
 	case "help", "--help", "-h":
 		c.usage(c.streams.say)
 		return nil

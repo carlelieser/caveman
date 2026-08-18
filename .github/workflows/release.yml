@@ -1,0 +1,76 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: tag to build and publish
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test ./...
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # install.sh derives caveman_<os>_<arch>.tar.gz from uname and expects the
+      # binary at the archive root. Renaming an asset here breaks installation
+      # with a 404, so the matrix and the layout are fixed by that script.
+      - name: Build release assets
+        env:
+          VERSION: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          mkdir -p dist
+          for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            workspace=$(mktemp -d)
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build \
+              -trimpath \
+              -ldflags "-s -w -X github.com/carlelieser/caveman/internal/cli.Version=$VERSION" \
+              -o "$workspace/caveman" ./cmd/caveman
+            tar -czf "dist/caveman_${os}_${arch}.tar.gz" -C "$workspace" caveman
+            rm -rf "$workspace"
+          done
+          (cd dist && shasum -a 256 ./*.tar.gz > checksums.txt)
+
+      # A tag that builds but does not install is the failure this catches: it
+      # unpacks the linux/amd64 asset the way install.sh does and runs it.
+      - name: Verify the asset install.sh will fetch
+        env:
+          VERSION: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -eu
+          workspace=$(mktemp -d)
+          tar -xzf dist/caveman_linux_amd64.tar.gz -C "$workspace"
+          test -f "$workspace/caveman"
+          "$workspace/caveman" help >/dev/null
+          test "$("$workspace/caveman" version)" = "caveman $VERSION"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: true

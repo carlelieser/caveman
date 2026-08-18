@@ -7,8 +7,11 @@
 set -euo pipefail
 
 REPOSITORY=carlelieser/caveman
-BIN_DIR=$HOME/.local/bin
+BIN_DIR=${CAVEMAN_BIN_DIR:-$HOME/.local/bin}
 VERSION=${CAVEMAN_VERSION:-latest}
+# Overridable so the release path can be exercised against a local server
+# rather than only in production.
+RELEASE_BASE_URL=${CAVEMAN_RELEASE_BASE_URL:-https://github.com/$REPOSITORY/releases}
 
 abort() {
   printf 'install: %s\n' "$*" >&2
@@ -50,9 +53,9 @@ asset_name() {
 download_url() {
   asset=$1
   if [ "$VERSION" = latest ]; then
-    printf 'https://github.com/%s/releases/latest/download/%s' "$REPOSITORY" "$asset"
+    printf '%s/latest/download/%s' "$RELEASE_BASE_URL" "$asset"
   else
-    printf 'https://github.com/%s/releases/download/%s/%s' "$REPOSITORY" "$VERSION" "$asset"
+    printf '%s/download/%s/%s' "$RELEASE_BASE_URL" "$VERSION" "$asset"
   fi
 }
 

@@ -246,3 +246,14 @@ func TestLeavesAClientsOwnDashLAloneAfterDoubleDash(t *testing.T) {
 	requireContains(t, result.stdout, "level=light", "level after --")
 	requireContains(t, result.stdout, "args=-l something", "args after --")
 }
+
+// Version is what a bug report identifies a build by. It is stamped with
+// -ldflags at release; a build made any other way says "dev" rather than
+// reporting nothing at all.
+func TestVersionReportsTheBuild(t *testing.T) {
+	for _, command := range []string{"version", "--version", "-v"} {
+		result := newHarness(t).run(command)
+		requireCode(t, result, 0)
+		requireContains(t, result.stdout, "caveman", "dev")
+	}
+}
