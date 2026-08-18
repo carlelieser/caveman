@@ -21,8 +21,13 @@ func TestClassifyRegionsMatchesGolden(t *testing.T) {
 	readGolden(t, "regions.json", &cases)
 
 	matched, prose, protectedCount := 0, 0, 0
-	for _, c := range cases {
+	for i, c := range cases {
 		got := ClassifyRegions(c.Text)
+		if *update {
+			cases[i].Regions = regionsOf(c.Text, got)
+			cases[i].ProseLength = proseUTF16(c.Text)
+			continue
+		}
 		diffs := compareRegions(c.Text, got, c.Regions)
 		for _, r := range c.Regions {
 			if r.Kind == RegionProse {
@@ -37,8 +42,26 @@ func TestClassifyRegionsMatchesGolden(t *testing.T) {
 		}
 		t.Errorf("%s: %d region difference(s)\n%s", c.ID, len(diffs), joinLimit(diffs, 12))
 	}
+	if *update {
+		writeGolden(t, "regions.json", cases)
+		return
+	}
 	t.Logf("regions.json: %d/%d nodes match exactly (%d prose, %d protected spans)",
 		matched, len(cases), prose, protectedCount)
+}
+
+// regionsOf records spans the way the oracle wrote them: UTF-16 offsets, which
+// is what compareRegions converts to when it reads them back.
+func regionsOf(text string, got []Region) []goldenRegion {
+	out := make([]goldenRegion, 0, len(got))
+	for _, r := range got {
+		out = append(out, goldenRegion{
+			Kind:  string(r.Kind),
+			Start: byteToUTF16(text, r.Start),
+			End:   byteToUTF16(text, r.End),
+		})
+	}
+	return out
 }
 
 // TestRegionsTile pins the invariant the assembler relies on: regions cover the

@@ -39,12 +39,17 @@ func TestCompressTextMatchesGolden(t *testing.T) {
 	readGolden(t, "compression.json", &cases)
 
 	matched := 0
-	for _, c := range cases {
+	for i, c := range cases {
 		got := CompressText(CompressRequest{
 			Text:    c.In,
 			Level:   Level(c.Level),
 			Context: CompressContext{Role: CompressRole(c.Role), Kind: CompressKind(c.Kind)},
 		})
+		if *update {
+			cases[i].Out = got.Text
+			cases[i].Stats = statsOf(c.In, got)
+			continue
+		}
 		diffs := diffCase(c, got)
 		if len(diffs) == 0 {
 			matched++
@@ -53,7 +58,24 @@ func TestCompressTextMatchesGolden(t *testing.T) {
 		t.Errorf("%s [%s]: %d difference(s)\n  in:   %q\n%s",
 			c.ID, c.Level, len(diffs), c.In, joinLimit(diffs, 8))
 	}
+	if *update {
+		writeGolden(t, "compression.json", cases)
+		return
+	}
 	t.Logf("compression.json: %d/%d cases match exactly", matched, len(cases))
+}
+
+// statsOf mirrors the shape the oracle recorded, so a regenerated file differs
+// only where compression did.
+func statsOf(in string, got CompressionResult) goldenStats {
+	return goldenStats{
+		WordsIn:        got.Stats.WordsIn,
+		WordsOut:       got.Stats.WordsOut,
+		CharsIn:        utf16Len(in),
+		CharsOut:       utf16Len(got.Text),
+		CharsProse:     proseUTF16(in),
+		IsUncompressed: got.Stats.IsUncompressed,
+	}
 }
 
 func diffCase(c compressionCase, got CompressionResult) []string {
