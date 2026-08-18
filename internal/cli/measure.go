@@ -204,11 +204,15 @@ const (
 )
 
 type timing struct {
-	name       string
-	median     time.Duration
-	low        time.Duration
-	high       time.Duration
-	charsProse int
+	name   string
+	median time.Duration
+	low    time.Duration
+	high   time.Duration
+	// charsIn is every character the pipeline walked, protected regions
+	// included. It is the numerator that matches the clock: the walk visits the
+	// whole request, so dividing by anything narrower reports a rate that falls
+	// as the prose share falls, which measures the corpus rather than the code.
+	charsIn int
 }
 
 // timeOne times the pipeline alone. Parsing the wire format is the server's
@@ -225,25 +229,25 @@ func timeOne(entry corpusEntry, level compress.Level) timing {
 	run := func() (time.Duration, int) {
 		started := time.Now()
 		result := compress.RunPipeline(request)
-		return time.Since(started), result.Stats.CharsProse
+		return time.Since(started), result.Stats.CharsBefore
 	}
 	for index := 0; index < warmupRuns; index++ {
 		run()
 	}
 	samples := make([]time.Duration, 0, timedRuns)
-	charsProse := 0
+	charsIn := 0
 	for index := 0; index < timedRuns; index++ {
-		elapsed, prose := run()
+		elapsed, walked := run()
 		samples = append(samples, elapsed)
-		charsProse = prose
+		charsIn = walked
 	}
 	sort.Slice(samples, func(left, right int) bool { return samples[left] < samples[right] })
 	return timing{
-		name:       entry.name,
-		median:     samples[len(samples)/2],
-		low:        samples[0],
-		high:       samples[len(samples)-1],
-		charsProse: charsProse,
+		name:    entry.name,
+		median:  samples[len(samples)/2],
+		low:     samples[0],
+		high:    samples[len(samples)-1],
+		charsIn: charsIn,
 	}
 }
 
@@ -255,17 +259,17 @@ func (c *CLI) printLevelTimings(corpus []corpusEntry) {
 	c.streams.say("corpus, %d runs each after %d warmup", timedRuns, warmupRuns)
 	for _, level := range compress.LevelNames {
 		total := time.Duration(0)
-		charsProse := 0
+		charsIn := 0
 		for _, entry := range corpus {
 			t := timeOne(entry, level)
 			total += t.median
-			charsProse += t.charsProse
+			charsIn += t.charsIn
 		}
 		perSecond := 0.0
 		if total > 0 {
-			perSecond = float64(charsProse) / total.Seconds()
+			perSecond = float64(charsIn) / total.Seconds()
 		}
-		c.streams.say("  %s %s  %sk prose chars/s",
+		c.streams.say("  %s %s  %sk chars/s",
 			padRight(string(level), 9), padLeft(milliseconds(total), 9),
 			group(int(perSecond/1000+0.5)))
 	}

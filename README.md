@@ -83,8 +83,9 @@ log lines pass through untouched. At `caveman` level:
 
 ### Performance
 
-Compression runs at about 160k prose characters a second, which puts a typical
-request in this corpus between 1ms and 20ms.
+Compression runs at about 350k characters a second over the whole request,
+protected regions included, or 325k with the token counting on top. A typical
+request in this corpus takes between 0.5ms and 12ms.
 
 `caveman measure --performance` to test pipeline latency.
 
