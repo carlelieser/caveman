@@ -6,9 +6,10 @@ A provider-native request converts into one internal representation, gets
 compressed, and converts back. Wire-format code lives in adapters; the
 compression pipeline knows no wire format. One adapter ships today: `anthropic`.
 
-Dependencies point one direction: `http → pipeline → ir` and
-`http → adapters → ir`. Adapters and compression never import each other, so a
-second provider is a new adapter and nothing else.
+Dependencies point one direction: `server → compress → ir` and
+`server → adapters → ir`. Adapters and compression never import each other, so a
+second provider is a new adapter and nothing else. A test walks `go list -deps`
+and fails if either edge appears.
 
 The IR remembers enough to reproduce the wire format exactly. It is not a model
 of provider features — unmodelled fields ride along as passthrough, and key
@@ -25,15 +26,23 @@ classes the level names.
 `light ⊂ moderate ⊂ caveman` — which makes output length non-increasing as the
 level rises.
 
-Word tagging comes from `compromise`. Its tags co-occur — a pronoun also carries
-`Noun`, a copula also carries `Verb` — so `TAG_PRIORITY` in `classify.ts` maps
-them in a fixed order and the first match wins. A word the classifier does not
-recognize resolves to `other`, which no level removes. Every unresolved case
-costs savings and never meaning.
+Word tagging is a port of `compromise` 14.16.0. Its tags co-occur — a pronoun
+also carries `Noun`, a copula also carries `Verb` — so `tagPriority` in
+`classify.go` maps them in a fixed order and the first match wins. A word the
+classifier does not recognize resolves to `other`, which no level removes. Every
+unresolved case costs savings and never meaning.
 
-The dependency is pinned to an exact version, no caret. Its lexicon decides how
-a word is tagged, so a patch release changes which words are dropped and
-therefore the bytes sent upstream.
+The lexicon, suffix rules, tag set and match patterns are generated into
+`internal/tagger/*.gen.go` from that exact version and committed. A lexicon
+decides how a word is tagged, so it is part of the source rather than a
+dependency that can move underneath a release.
+
+Two platform APIs have no direct equivalent. `Intl.Segmenter` becomes `uniseg`
+for grapheme clusters, and `\p{Extended_Pictographic}` becomes a generated range
+table — the union of that property and `Emoji_Presentation`, since the regional
+indicators that build flag sequences carry only the latter. RE2 has no
+lookaround, so the version and filename patterns are hand-rolled scans whose
+edge cases are pinned directly.
 
 ## Subordinators
 
@@ -89,10 +98,10 @@ Overlapping spans merge before the gaps between them become prose regions, so
 protection never fragments, and the regions tile: reconstructing them in order
 yields the input back.
 
-Each prose region is parsed on its own, so `compromise` sees whole sentences and
+Each prose region is parsed on its own, so the tagger sees whole sentences and
 can disambiguate by context — `book` is a verb in "book a flight" and a noun in
-"the book is here". Offsets stay anchored to the original string, and every
-classified word satisfies `text.slice(word.start, word.end) === word.text`.
+"the book is here". Offsets are byte offsets into the original string, and every
+classified word satisfies `text[word.Start:word.End] == word.Text`.
 
 Words that fall outside grapheme cluster boundaries are dropped from the result
 instead of sliced. Their characters stay in the gap, where they are copied
@@ -106,7 +115,8 @@ original, since removal cannot lengthen text and a longer candidate means the
 assembly is at fault.
 
 Compression is deterministic: the same text at the same level produces the same
-bytes, in one process and across processes.
+bytes. Nothing in the path reads a clock, a random source, or a map in
+iteration order.
 
 ## Caching
 
@@ -139,8 +149,8 @@ body misses the cache even when it carries identical values.
 
 ## Accounting
 
-Response headers estimate at four characters to the token, because measuring
-exactly would mean an upstream `count_tokens` call per request.
+Response headers estimate at four bytes to the token, because measuring exactly
+would mean an upstream `count_tokens` call per request.
 `X-Caveman-Ratio` reports the reduction achieved, not the one the level asked
 for, and the headers attach even when upstream errors — so a compression-induced
 4xx arrives with the ratio that caused it.
@@ -151,26 +161,36 @@ Those are the numbers the invoice is built from. Cache reads bill at a fraction
 of the base rate and cache writes at a premium, so a prefix that stopped
 matching shows up as writes replacing reads.
 
-Reading costs the stream nothing. Each chunk is enqueued before the observer
-sees it, and a throwing observer cannot hold a chunk back, so the first token
-reaches the client as soon as upstream emits it.
+Reading costs the stream nothing. Each chunk is written to the client and
+flushed before the observer sees it, so the first token arrives as soon as
+upstream emits it. A test gates this by holding each upstream event back until
+the client confirms the previous one, which makes buffering a hang rather than a
+slow-clock guess.
 
 ## What the tests assert
 
-436 tests across 17 files.
+217 test functions across 27 files, many table-driven over the recorded corpus
+in `testdata/golden/`.
 
-- **Round-trip identity.** `fromIR(toIR(x))` re-serializes to the same *bytes*
-  as `x` for every fixture — string equality, not deep equality, so key order
+- **The recorded corpus.** Region tiling, word classification and compressed
+  output are compared span for span and byte for byte against a corpus recorded
+  from the original implementation: 69 tagger nodes, 69 region nodes, 22 unicode
+  cases, 207 compression cases.
+- **Round-trip identity.** `FromIR(ToIR(x))` re-serializes to the same *bytes*
+  as `x` for all 30 fixtures — string equality, not deep equality, so key order
   counts.
 - **Transparency.** With no Caveman headers, the forwarded body is
   byte-identical to what the client sent.
-- **Determinism.** Identical output across separate Node processes.
+- **Determinism.** Repeated runs produce identical bytes, and the same request
+  compressed twice forwards the same body.
 - **Structural validity.** Every fixture at every level keeps `tool_use` inputs
   parseable, `thinking` blocks unchanged, `tool_use_id` pairings intact, and
   emits no empty text block.
 - **Region protection.** Regions tile with no gaps or overlaps, and each
   protected construct stays byte-identical at every level.
-- **Unicode safety.** No lone surrogates, emoji sequences stay whole, combining
-  marks stay attached.
+- **Unicode safety.** Output is well-formed UTF-8, emoji sequences stay whole,
+  combining marks stay attached, and no word boundary splits a grapheme cluster.
 - **Cache behaviour.** Both modes, including a breakpoint rolling forward across
   turns.
+- **Layering.** `go list -deps` is walked to prove compression and the adapters
+  never import each other.

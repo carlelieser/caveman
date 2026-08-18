@@ -60,6 +60,7 @@ func (c *CLI) usage(out func(string, ...any)) {
 	out("  caveman down                  stop the proxy")
 	out("  caveman status                report whether the proxy is running")
 	out("  caveman <client> [-l LEVEL]   start the proxy, then launch a client")
+	out("  caveman measure [--performance]  report savings over the recorded corpus")
 	out("")
 	out("  -l, --level LEVEL       %s (default %s)", LevelList(), DefaultLevel)
 	out("                          a level given to up is inherited by clients")
@@ -104,6 +105,12 @@ func (c *CLI) dispatch(argv []string) *exitError {
 	if len(argv) > 0 {
 		command = argv[0]
 		argv = argv[1:]
+	}
+
+	// measure takes its own flags and never starts a server, so it is answered
+	// before the level flag is read out of the line.
+	if command == "measure" {
+		return c.measure(argv)
 	}
 
 	parsedArgs, failure := parseLevelFlag(argv)

@@ -27,6 +27,7 @@ caveman claude
 | `caveman down`           | Stop it, reporting the session savings       |
 | `caveman status`         | Say whether it is running, and on which port |
 | `caveman <client> [...]` | Start it if needed, then launch a client     |
+| `caveman measure`        | Report savings over the recorded corpus      |
 
 ### Levels
 
@@ -57,9 +58,9 @@ Nouns, verbs, numbers, proper nouns, negations and subordinators (`if`,
 
 | Level      | Tokens        | Saved  |
 | ---------- | ------------- | ------ |
-| `light`    | 6,287 → 5,880 | -6.5%  |
-| `moderate` | 6,287 → 4,935 | -21.5% |
-| `caveman`  | 6,287 → 4,442 | -29.3% |
+| `light`    | 6,288 → 5,880 | -6.5%  |
+| `moderate` | 6,288 → 4,935 | -21.5% |
+| `caveman`  | 6,288 → 4,442 | -29.4% |
 
 Savings depend on how much of the request is prose, since code, JSON, and
 log lines pass through untouched. At `caveman` level:
@@ -73,22 +74,22 @@ log lines pass through untouched. At `caveman` level:
 | Mostly a pasted diff            | 32%   | -12.8% |
 | Terse expert question           | 31%   | -7.2%  |
 
-`npm run measure` to test against corpus.
+`caveman measure` to test against corpus.
 
 ### Performance
 
 Compression runs at about 160k prose characters a second, which puts a typical
 request in this corpus between 1ms and 20ms.
 
-`npm run measure -- --performance` to test pipeline latency.
+`caveman measure --performance` to test pipeline latency.
 
 ## Running without the CLI
 
 The proxy is an ordinary server, so run it and point a client at it yourself:
 
 ```sh
-npm install
-npm start # (or `npm run dev` for development)
+go build -o caveman ./cmd/caveman
+CAVEMAN_SERVE=1 ./caveman
 ```
 
 ```sh
@@ -153,24 +154,21 @@ holding the port, so it will not start over one or stop it.
 ## Layout
 
 ```
-src/
+cmd/caveman/     the entry point
+internal/
   ir/            provider-neutral representation and its walk
   adapters/      wire format ↔ IR, one directory per provider
-  compression/   region protection, word classification, the levels
+  compress/      region protection, word classification, the levels
+  tagger/        part-of-speech tagging and its generated lexicon
   policy/        header parsing
-  http/          Hono server, request handler, upstream, SSE passthrough, health
+  server/        request handler, upstream, SSE passthrough, health
   telemetry/     accounting, response headers, savings log, usage
-  config/        .env loading
-bin/
-  caveman        the CLI entry point
-  lib/           paths, port, level, health, daemon, client
-  clients/       one file per client
-scripts/
-  measure.ts     token savings (`--savings`) and pipeline latency (`--performance`)
+  cli/           commands, daemon, clients, measure
+testdata/golden/ the recorded corpus the tests gate against
 ```
 
 ## Tests
 
 ```sh
-npm test
+go test ./...
 ```
