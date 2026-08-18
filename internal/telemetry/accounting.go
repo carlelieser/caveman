@@ -8,11 +8,6 @@ import (
 	"github.com/carlelieser/caveman/internal/policy"
 )
 
-// Characters per token for English-weighted prose. Estimation is local because
-// an upstream count_tokens call per request would cost more than the saving it
-// measures; the billed counts arrive in the upstream response's usage.
-const charsPerToken = 4
-
 // PipelineStats is what one compression pass did. The compression pipeline
 // fills it in; accounting only reads it.
 type PipelineStats struct {
@@ -27,6 +22,15 @@ type PipelineStats struct {
 	// CharsProse counts prose characters across every node seen, skipped ones
 	// included.
 	CharsProse int
+	// TokensBefore and TokensAfter are real tokenizer counts, summed per node
+	// as the pipeline walks. They are counted there and not derived here
+	// because tokenization needs the text, which a character count has already
+	// thrown away: tokens do not divide across a concatenation boundary the way
+	// characters do, so a whole-request count and the sum of its nodes differ
+	// slightly. Summing per node is what makes before and after comparable,
+	// since both are summed over the same node boundaries.
+	TokensBefore int
+	TokensAfter  int
 }
 
 type TokenAccounting struct {
@@ -44,12 +48,8 @@ const (
 	HeaderLevel        = "X-Caveman-Level"
 )
 
-func estimateTokens(charCount int) int {
-	return int(math.Ceil(float64(charCount) / charsPerToken))
-}
-
-// reductionRatio is the fraction of estimated tokens removed. Zero when there
-// was nothing to drop.
+// reductionRatio is the fraction of tokens removed. Zero when there was
+// nothing to drop.
 func reductionRatio(tokensBefore, tokensAfter int) float64 {
 	if tokensBefore == 0 {
 		return 0
@@ -62,8 +62,8 @@ func roundRatio(ratio float64) float64 {
 }
 
 func AccountFor(stats PipelineStats) TokenAccounting {
-	tokensBefore := estimateTokens(stats.CharsBefore)
-	tokensAfter := estimateTokens(stats.CharsAfter)
+	tokensBefore := stats.TokensBefore
+	tokensAfter := stats.TokensAfter
 	return TokenAccounting{
 		TokensBefore: tokensBefore,
 		TokensAfter:  tokensAfter,

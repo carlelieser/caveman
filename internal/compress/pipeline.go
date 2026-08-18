@@ -6,6 +6,7 @@ import (
 	"github.com/carlelieser/caveman/internal/ir"
 	"github.com/carlelieser/caveman/internal/policy"
 	"github.com/carlelieser/caveman/internal/telemetry"
+	"github.com/carlelieser/caveman/internal/tokens"
 )
 
 // CacheMode is what to do about text a `cache_control` breakpoint covers. The
@@ -90,6 +91,11 @@ func skipNode(node ir.TextNode, stats *telemetry.PipelineStats) string {
 	stats.CharsBefore += len(node.Text)
 	stats.CharsAfter += len(node.Text)
 	stats.CharsProse += ProseLength(node.Text)
+	// An untouched node is counted once and charged to both sides, so it adds
+	// nothing to the saving without dropping out of the totals.
+	nodeTokens := tokens.Count(node.Text)
+	stats.TokensBefore += nodeTokens
+	stats.TokensAfter += nodeTokens
 	return node.Text
 }
 
@@ -118,6 +124,8 @@ func compressNode(node ir.TextNode, request PipelineRequest, stats *telemetry.Pi
 	stats.CharsBefore += result.Stats.CharsIn
 	stats.CharsAfter += len(text)
 	stats.CharsProse += result.Stats.CharsProse
+	stats.TokensBefore += tokens.Count(node.Text)
+	stats.TokensAfter += tokens.Count(text)
 	if !emptied && !result.Stats.IsUncompressed {
 		stats.NodesCompressed++
 	}

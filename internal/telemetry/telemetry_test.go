@@ -12,23 +12,29 @@ import (
 	"github.com/carlelieser/caveman/internal/telemetry"
 )
 
-func statsFor(charsBefore, charsAfter int) telemetry.PipelineStats {
+// statsFor builds the stats a pipeline run would have produced for one node.
+// Token counts are given directly rather than derived from the character
+// counts: the pipeline tokenizes the text it walked, and accounting only adds
+// up what it was handed.
+func statsFor(tokensBefore, tokensAfter int) telemetry.PipelineStats {
 	return telemetry.PipelineStats{
 		Level:           policy.LevelModerate,
 		NodesSeen:       1,
 		NodesCompressed: 1,
-		CharsBefore:     charsBefore,
-		CharsAfter:      charsAfter,
-		CharsProse:      charsBefore,
+		CharsBefore:     tokensBefore * 4,
+		CharsAfter:      tokensAfter * 4,
+		CharsProse:      tokensBefore * 4,
+		TokensBefore:    tokensBefore,
+		TokensAfter:     tokensAfter,
 	}
 }
 
 func TestTokenAccounting(t *testing.T) {
-	accounting := telemetry.AccountFor(statsFor(400, 240))
+	accounting := telemetry.AccountFor(statsFor(100, 60))
 	if accounting.TokensBefore != 100 || accounting.TokensAfter != 60 || accounting.TokensSaved != 40 {
 		t.Errorf("accounting = %+v", accounting)
 	}
-	if got := telemetry.AccountFor(statsFor(400, 400)).TokensSaved; got != 0 {
+	if got := telemetry.AccountFor(statsFor(100, 100)).TokensSaved; got != 0 {
 		t.Errorf("tokens saved with nothing dropped = %d", got)
 	}
 	empty := telemetry.AccountFor(statsFor(0, 0))
@@ -37,16 +43,9 @@ func TestTokenAccounting(t *testing.T) {
 	}
 }
 
-// The estimate rounds up, so a partial token still costs one.
-func TestTokenEstimateRoundsUp(t *testing.T) {
-	if got := telemetry.AccountFor(statsFor(5, 0)).TokensBefore; got != 2 {
-		t.Errorf("5 chars estimated as %d tokens, want 2", got)
-	}
-}
-
 func TestAccountingHeaders(t *testing.T) {
 	headers := http.Header{}
-	telemetry.ApplyAccountingHeaders(headers, telemetry.AccountFor(statsFor(400, 240)))
+	telemetry.ApplyAccountingHeaders(headers, telemetry.AccountFor(statsFor(100, 60)))
 	cases := map[string]string{
 		telemetry.HeaderTokensBefore: "100",
 		telemetry.HeaderTokensAfter:  "60",
@@ -231,7 +230,7 @@ func collectLines() (*telemetry.Reporter, *[]string) {
 // The CLI greps these lines, so the separators are part of the contract.
 func TestRequestLineFormat(t *testing.T) {
 	reporter, lines := collectLines()
-	reporter.Record(statsFor(400, 240))
+	reporter.Record(statsFor(100, 60))
 	if len(*lines) != 1 {
 		t.Fatalf("wrote %d lines", len(*lines))
 	}
@@ -245,7 +244,7 @@ func TestRequestLineFormat(t *testing.T) {
 
 func TestThousandsAreGrouped(t *testing.T) {
 	reporter, lines := collectLines()
-	reporter.Record(statsFor(40000, 24000))
+	reporter.Record(statsFor(10000, 6000))
 	if !strings.Contains((*lines)[0], "10,000 → 6,000 tok") {
 		t.Errorf("line %q does not group thousands", (*lines)[0])
 	}
@@ -255,13 +254,13 @@ func TestThousandsAreGrouped(t *testing.T) {
 // line would read `0 cached` on every request.
 func TestSkippedNodesAppearOnlyWhenNonZero(t *testing.T) {
 	reporter, lines := collectLines()
-	reporter.Record(statsFor(400, 240))
+	reporter.Record(statsFor(100, 60))
 	if strings.Contains((*lines)[0], "cached") {
 		t.Errorf("line %q mentions cached nodes when none were skipped", (*lines)[0])
 	}
 
 	reporter, lines = collectLines()
-	stats := statsFor(400, 400)
+	stats := statsFor(100, 100)
 	stats.NodesSeen = 2
 	stats.NodesSkipped = 2
 	stats.NodesCompressed = 0
@@ -282,8 +281,8 @@ func TestProseShareIsADashForEmptyInput(t *testing.T) {
 
 func TestSessionTotalAccumulates(t *testing.T) {
 	reporter, lines := collectLines()
-	reporter.Record(statsFor(400, 240))
-	reporter.Record(statsFor(400, 240))
+	reporter.Record(statsFor(100, 60))
+	reporter.Record(statsFor(100, 60))
 	pattern := regexp.MustCompile(`session ([\d,]+) saved`)
 	first := pattern.FindStringSubmatch((*lines)[0])
 	second := pattern.FindStringSubmatch((*lines)[1])
@@ -300,7 +299,7 @@ func TestSummaryIsAbsentUntilSomethingIsCompressed(t *testing.T) {
 	if _, ok := reporter.Summary(); ok {
 		t.Error("an idle reporter produced a summary")
 	}
-	reporter.Record(statsFor(400, 240))
+	reporter.Record(statsFor(100, 60))
 	summary, ok := reporter.Summary()
 	if !ok {
 		t.Fatal("no summary after a compressed request")
@@ -308,7 +307,7 @@ func TestSummaryIsAbsentUntilSomethingIsCompressed(t *testing.T) {
 	if !strings.Contains(summary, "1 request") || strings.Contains(summary, "1 requests") {
 		t.Errorf("summary %q does not say 1 request", summary)
 	}
-	reporter.Record(statsFor(400, 240))
+	reporter.Record(statsFor(100, 60))
 	summary, _ = reporter.Summary()
 	if !strings.Contains(summary, "2 requests") || !strings.Contains(summary, "80 tok saved") {
 		t.Errorf("summary = %q", summary)

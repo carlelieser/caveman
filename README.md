@@ -2,8 +2,8 @@
 
 <img src="docs/images/banner.png" alt="A caveman holding a torch before painted rocks in a cave" width="100%">
 
-A compression proxy that uses part-of-speech tagging to remove word classes, cutting tokens by about 30% on a
-mixed corpus and up to 46% on prose-heavy requests (see [Savings](#savings)).
+A compression proxy that uses part-of-speech tagging to remove word classes, cutting tokens by about 28% on a
+mixed corpus and up to 52% on prose-heavy requests (see [Savings](#savings)).
 
 How it works: [DESIGN.md](docs/DESIGN.md).
 
@@ -63,21 +63,21 @@ Nouns, verbs, numbers, proper nouns, negations and subordinators (`if`,
 
 | Level      | Tokens        | Saved  |
 | ---------- | ------------- | ------ |
-| `light`    | 6,288 → 5,880 | -6.5%  |
-| `moderate` | 6,288 → 4,935 | -21.5% |
-| `caveman`  | 6,288 → 4,442 | -29.4% |
+| `light`    | 6,353 → 5,930 | -6.7%  |
+| `moderate` | 6,353 → 4,916 | -22.6% |
+| `caveman`  | 6,353 → 4,609 | -27.5% |
 
 Savings depend on how much of the request is prose, since code, JSON, and
 log lines pass through untouched. At `caveman` level:
 
 | Request                         | Prose | Saved  |
 | ------------------------------- | ----- | ------ |
-| Rambling bug report             | 99%   | -46.0% |
-| Dense prose, no code            | 100%  | -39.3% |
-| Six-turn debugging conversation | 98%   | -36.9% |
-| Bug report with a stack trace   | 70%   | -27.8% |
-| Mostly a pasted diff            | 32%   | -12.8% |
-| Terse expert question           | 31%   | -7.2%  |
+| Rambling bug report             | 99%   | -51.6% |
+| Dense prose, no code            | 100%  | -47.1% |
+| Six-turn debugging conversation | 98%   | -39.0% |
+| Bug report with a stack trace   | 70%   | -26.2% |
+| Mostly a pasted diff            | 32%   | -12.4% |
+| Terse expert question           | 31%   | -5.9%  |
 
 `caveman measure` to test against corpus.
 

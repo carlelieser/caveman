@@ -10,6 +10,7 @@ import (
 	"github.com/carlelieser/caveman/internal/policy"
 	"github.com/carlelieser/caveman/internal/server"
 	"github.com/carlelieser/caveman/internal/telemetry"
+	"github.com/carlelieser/caveman/internal/tokens"
 )
 
 const verboseSystem = "You are a very helpful assistant that is able to answer all of the questions " +
@@ -36,6 +37,7 @@ func upperStage(request ir.Request, p policy.Policy) server.StageResult {
 		stats.NodesSeen++
 		stats.CharsBefore += len(node.Text)
 		stats.CharsProse += len(node.Text)
+		stats.TokensBefore += tokens.Count(node.Text)
 	}
 	compressed := ir.MapTextNodes(request, scopes, func(node ir.TextNode) string {
 		stats.NodesCompressed++
@@ -43,6 +45,7 @@ func upperStage(request ir.Request, p policy.Policy) server.StageResult {
 	})
 	for _, node := range ir.CollectTextNodes(compressed, ir.AllScopes) {
 		stats.CharsAfter += len(node.Text)
+		stats.TokensAfter += tokens.Count(node.Text)
 	}
 	return server.StageResult{Request: compressed, Stats: &stats}
 }

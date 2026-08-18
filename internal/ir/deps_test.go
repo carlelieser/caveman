@@ -44,12 +44,26 @@ func TestDependencyDirection(t *testing.T) {
 			"github.com/carlelieser/caveman/internal/tagger",
 		},
 		// Telemetry reports what compression did without depending on how it is
-		// done, so the pipeline can change without touching the log format.
+		// done, so the pipeline can change without touching the log format. It
+		// must not reach the tokenizer either: counts are produced during the
+		// walk, where the text still exists, and accounting only adds them up.
 		"github.com/carlelieser/caveman/internal/telemetry": {
 			"github.com/carlelieser/caveman/internal/adapters",
 			"github.com/carlelieser/caveman/internal/compress",
 			"github.com/carlelieser/caveman/internal/server",
 			"github.com/carlelieser/caveman/internal/tagger",
+			"github.com/carlelieser/caveman/internal/tokens",
+		},
+		// The tokenizer is a leaf: it counts text and knows nothing about
+		// requests, levels, or what is being counted.
+		"github.com/carlelieser/caveman/internal/tokens": {
+			"github.com/carlelieser/caveman/internal/adapters",
+			"github.com/carlelieser/caveman/internal/compress",
+			"github.com/carlelieser/caveman/internal/ir",
+			"github.com/carlelieser/caveman/internal/policy",
+			"github.com/carlelieser/caveman/internal/server",
+			"github.com/carlelieser/caveman/internal/tagger",
+			"github.com/carlelieser/caveman/internal/telemetry",
 		},
 	}
 	for pkg, banned := range forbidden {
