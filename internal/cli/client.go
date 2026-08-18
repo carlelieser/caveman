@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 
 	"github.com/carlelieser/caveman/internal/policy"
@@ -18,6 +19,7 @@ type client func(c *CLI, launch launchContext) *exitError
 type launchContext struct {
 	BaseURL string
 	Level   string
+	Count   bool
 	Args    []string
 }
 
@@ -36,6 +38,38 @@ func compressHeader(level string) string {
 	return policy.CompressHeader + ": " + level
 }
 
+// countHeader asks the proxy to count tokens. Nothing is sent when counting is
+// off, since off is the server's default too.
+func countHeader(count bool) string {
+	if !count {
+		return ""
+	}
+	return policy.CountHeader + ": " + countOn
+}
+
+// customHeaders joins the headers a launch sends into one
+// ANTHROPIC_CUSTOM_HEADERS value. The Claude CLI parses that variable as
+// newline-separated `Name: Value` lines, so the separator is a newline and
+// never a comma. Empty entries are dropped rather than joined, which keeps a
+// blank line out of the value when only one header applies.
+func customHeaders(headers ...string) string {
+	present := make([]string, 0, len(headers))
+	for _, header := range headers {
+		if header != "" {
+			present = append(present, header)
+		}
+	}
+	return strings.Join(present, "\n")
+}
+
+// countLabel names the counting setting for the lines the CLI prints.
+func countLabel(count bool) string {
+	if count {
+		return countOn
+	}
+	return countOff
+}
+
 func launchClaude(c *CLI, launch launchContext) *exitError {
 	path, err := exec.LookPath("claude")
 	if err != nil {
@@ -43,7 +77,7 @@ func launchClaude(c *CLI, launch launchContext) *exitError {
 	}
 	environment := append(c.environ(),
 		"ANTHROPIC_BASE_URL="+launch.BaseURL,
-		"ANTHROPIC_CUSTOM_HEADERS="+compressHeader(launch.Level),
+		"ANTHROPIC_CUSTOM_HEADERS="+customHeaders(compressHeader(launch.Level), countHeader(launch.Count)),
 		"ENABLE_TOOL_SEARCH=true",
 	)
 	argv := append([]string{"claude"}, launch.Args...)
@@ -101,6 +135,8 @@ func (c *CLI) launchScript(path string, launch launchContext) *exitError {
 		"CAVEMAN_BASE_URL="+launch.BaseURL,
 		"CAVEMAN_LEVEL="+launch.Level,
 		"CAVEMAN_COMPRESS_HEADER="+compressHeader(launch.Level),
+		"CAVEMAN_COUNT="+countLabel(launch.Count),
+		"CAVEMAN_COUNT_HEADER="+countHeader(launch.Count),
 	)
 	argv := append([]string{path}, launch.Args...)
 	return c.exec(path, argv, environment)
@@ -110,7 +146,7 @@ func (c *CLI) launchScript(path string, launch launchContext) *exitError {
 // when the server is already up, since this runs before every client launch.
 func (c *CLI) launchClient(name string, port int, baseURL string, launch launchContext) *exitError {
 	if !isRunning(baseURL) {
-		if failure := c.startServer(port, baseURL, launch.Level); failure != nil {
+		if failure := c.startServer(port, baseURL, launch.Level, launch.Count); failure != nil {
 			return failure
 		}
 	}

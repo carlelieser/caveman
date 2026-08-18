@@ -47,6 +47,7 @@ func CompressionStage(request ir.Request, p policy.Policy) server.StageResult {
 		Level:     p.Level,
 		Scopes:    enabledScopes(p),
 		CacheMode: p.CacheMode,
+		Count:     p.Count,
 	})
 	stats := result.Stats
 	return server.StageResult{Request: result.Request, Stats: &stats}

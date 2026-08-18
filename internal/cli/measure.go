@@ -100,6 +100,10 @@ func measureOne(entry corpusEntry, level compress.Level) measurement {
 		Level:     level,
 		Scopes:    ir.AllScopes,
 		CacheMode: compress.CacheIgnore,
+		// measure exists to report token savings over the corpus, so it counts
+		// regardless of the flag or the stored setting. It is a one-shot command
+		// over a fixed body, not a per-turn cost on a live session.
+		Count: true,
 	})
 	accounting := telemetry.AccountFor(result.Stats)
 	share := 0.0

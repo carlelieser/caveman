@@ -168,7 +168,7 @@ func TestCacheRejections(t *testing.T) {
 // Every control header Caveman reads must be listed for stripping, or it leaks
 // to the provider.
 func TestCavemanHeaderNames(t *testing.T) {
-	want := []string{"X-Caveman-Compress", "X-Caveman-Scope", "X-Caveman-Cache"}
+	want := []string{"X-Caveman-Compress", "X-Caveman-Scope", "X-Caveman-Cache", "X-Caveman-Count"}
 	if len(policy.CavemanHeaderNames) != len(want) {
 		t.Fatalf("listed %v", policy.CavemanHeaderNames)
 	}
@@ -185,5 +185,31 @@ func TestFailureMessageNamesTheHeaderAndValue(t *testing.T) {
 	message := failure.Error()
 	if !strings.Contains(message, policy.CompressHeader) || !strings.Contains(message, "bogus") {
 		t.Errorf("message = %q", message)
+	}
+}
+
+// Counting costs a tokenizer pass per request, so it happens only when a client
+// asks for it by name.
+func TestCountDefaultsToOff(t *testing.T) {
+	if mustParse(t, nil).Count {
+		t.Error("counting is on when no header asked for it")
+	}
+	if mustParse(t, map[string]string{policy.CountHeader: "off"}).Count {
+		t.Error("counting is on for an explicit off")
+	}
+	if !mustParse(t, map[string]string{policy.CountHeader: "on"}).Count {
+		t.Error("counting is off although the header asked for it")
+	}
+	if !mustParse(t, map[string]string{policy.CountHeader: "  ON  "}).Count {
+		t.Error("counting rejected a padded, upper-case on")
+	}
+}
+
+func TestCountRejectsWhatItCannotRead(t *testing.T) {
+	if failure := mustReject(t, map[string]string{policy.CountHeader: "yes"}); failure.Header != policy.CountHeader {
+		t.Errorf("rejection named %q", failure.Header)
+	}
+	if failure := mustReject(t, map[string]string{policy.CountHeader: "   "}); failure.Header != policy.CountHeader {
+		t.Errorf("empty value rejection named %q", failure.Header)
 	}
 }

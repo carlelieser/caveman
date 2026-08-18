@@ -37,12 +37,16 @@ type parsed struct {
 	// level is empty when no flag was given, which is what lets a stored level
 	// show through.
 	level string
+	// count is nil when neither --count nor --no-count was given, which is
+	// what lets a stored setting show through. A pointer rather than a bool
+	// because "not said" and "said no" resolve differently.
+	count *bool
 	args  []string
 }
 
-// parseLevelFlag strips --level/-l and leaves the rest, so a client receives
+// parseFlags strips Caveman's own flags and leaves the rest, so the client
 // only what belongs to it.
-func parseLevelFlag(argv []string) (parsed, *exitError) {
+func parseFlags(argv []string) (parsed, *exitError) {
 	result := parsed{args: []string{}}
 	for index := 0; index < len(argv); index++ {
 		argument := argv[index]
@@ -51,6 +55,12 @@ func parseLevelFlag(argv []string) (parsed, *exitError) {
 			// Everything after `--` belongs to the client, including its own -l.
 			result.args = append(result.args, argv[index+1:]...)
 			return result, nil
+		case argument == countFlag:
+			yes := true
+			result.count = &yes
+		case argument == noCountFlag:
+			no := false
+			result.count = &no
 		case argument == "--level" || argument == "-l":
 			if index+1 >= len(argv) {
 				return result, die(ExitUsage, "reading %s failed: no level given", argument)

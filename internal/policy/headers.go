@@ -10,13 +10,16 @@ const (
 	CompressHeader = "X-Caveman-Compress"
 	ScopeHeader    = "X-Caveman-Scope"
 	CacheHeader    = "X-Caveman-Cache"
+	CountHeader    = "X-Caveman-Count"
 )
 
 // CavemanHeaderNames is the set the upstream forwarder strips. Every control
 // header Caveman reads must appear here or it leaks to the provider.
-var CavemanHeaderNames = []string{CompressHeader, ScopeHeader, CacheHeader}
+var CavemanHeaderNames = []string{CompressHeader, ScopeHeader, CacheHeader, CountHeader}
 
 const offValue = "off"
+
+const onValue = "on"
 
 // Level is how much grammar a request is willing to lose.
 type Level string
@@ -77,6 +80,11 @@ type Policy struct {
 	Level     Level
 	Scope     Scope
 	CacheMode CacheMode
+	// Count asks for real token counts in the savings report. Off by default:
+	// counting costs a BPE pass per node per request, and a chat re-sends its
+	// history every turn, so the cost follows conversation size rather than the
+	// size of the new turn. Off, savings are reported in characters.
+	Count bool
 }
 
 func (p Policy) CompressionEnabled() bool { return p.Level != "" }
@@ -204,6 +212,26 @@ func parseCacheMode(headers http.Header) (CacheMode, *Failure) {
 	return "", &Failure{CacheHeader, raw, "must be one of " + strings.Join(names, ", ")}
 }
 
+// parseCount reads the counting switch. Absent means off, which is the default,
+// so a client that says nothing pays no tokenizer cost.
+func parseCount(headers http.Header) (bool, *Failure) {
+	raw, present := header(headers, CountHeader)
+	if !present {
+		return false, nil
+	}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return false, &Failure{CountHeader, raw, "must not be empty"}
+	}
+	switch strings.ToLower(trimmed) {
+	case onValue:
+		return true, nil
+	case offValue:
+		return false, nil
+	}
+	return false, &Failure{CountHeader, raw, "must be one of " + onValue + ", " + offValue}
+}
+
 // Parse reads the three control headers. The first rejection wins, so a client
 // sending two bad values fixes them one at a time in header order.
 func Parse(headers http.Header) (Policy, *Failure) {
@@ -219,5 +247,9 @@ func Parse(headers http.Header) (Policy, *Failure) {
 	if failure != nil {
 		return Policy{}, failure
 	}
-	return Policy{Level: level, Scope: buildScope(names), CacheMode: cacheMode}, nil
+	count, failure := parseCount(headers)
+	if failure != nil {
+		return Policy{}, failure
+	}
+	return Policy{Level: level, Scope: buildScope(names), CacheMode: cacheMode, Count: count}, nil
 }

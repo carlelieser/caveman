@@ -22,10 +22,16 @@ const (
 var printer = message.NewPrinter(language.AmericanEnglish)
 
 // Reporter tallies one session's compression and what it was billed.
+//
+// saved is in whichever unit the session measured — tokens when counting was
+// on, characters when it was off. The switch is resolved once per client
+// launch, so a session's total stays in one unit; unit holds the last one
+// reported, for the summary line.
 type Reporter struct {
-	sink        Sink
-	tokensSaved int
-	requests    int
+	sink     Sink
+	saved    int
+	unit     string
+	requests int
 }
 
 func NewReporter(sink Sink) *Reporter {
@@ -70,20 +76,20 @@ func prose(stats PipelineStats) string {
 	return strconv.FormatFloat(share, 'f', 0, 64) + "% prose"
 }
 
-func requestLine(accounting TokenAccounting, stats PipelineStats, tokensSaved int) string {
+func requestLine(accounting TokenAccounting, stats PipelineStats, saved int) string {
 	saving := strings.Join([]string{
-		fmt.Sprintf("%s %s %s tok", count(accounting.TokensBefore), arrow, count(accounting.TokensAfter)),
+		fmt.Sprintf("%s %s %s %s", count(accounting.Before), arrow, count(accounting.After), accounting.Unit()),
 		percent(accounting.Ratio),
 		string(accounting.Level),
 		nodes(stats),
 		prose(stats),
 	}, "  ")
-	return fmt.Sprintf("%s  %s  %s  session %s saved", prefix, saving, emDash, count(tokensSaved))
+	return fmt.Sprintf("%s  %s  %s  session %s saved", prefix, saving, emDash, count(saved))
 }
 
-func summaryLine(tokensSaved, requests int) string {
-	return fmt.Sprintf("%s  session  %s tok saved across %s",
-		prefix, count(tokensSaved), plural(requests, "request"))
+func summaryLine(saved, requests int, unit string) string {
+	return fmt.Sprintf("%s  session  %s %s saved across %s",
+		prefix, count(saved), unit, plural(requests, "request"))
 }
 
 // billed is a count the response did not carry, rather than a zero it did.
@@ -109,9 +115,10 @@ func usageLine(usage Usage) string {
 
 func (r *Reporter) Record(stats PipelineStats) {
 	accounting := AccountFor(stats)
-	r.tokensSaved += accounting.TokensSaved
+	r.saved += accounting.Saved
+	r.unit = accounting.Unit()
 	r.requests++
-	r.sink(requestLine(accounting, stats, r.tokensSaved))
+	r.sink(requestLine(accounting, stats, r.saved))
 }
 
 // RecordUsage reports what the provider billed for one request. Separate from
@@ -130,5 +137,5 @@ func (r *Reporter) Summary() (string, bool) {
 	if r.requests == 0 {
 		return "", false
 	}
-	return summaryLine(r.tokensSaved, r.requests), true
+	return summaryLine(r.saved, r.requests, r.unit), true
 }

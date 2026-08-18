@@ -176,8 +176,10 @@ func TestTheLogCarriesTheSeparatorsTheContractNames(t *testing.T) {
 	contents := string(log)
 	// The request line: two spaces between every field, U+2192 between the
 	// counts, U+2014 before the running total.
+	// Counting is opt-in, so an ordinary run reports characters. The unit is the
+	// only part of the shape that moves.
 	requestLine := regexp.MustCompile(
-		`(?m)^caveman  [\d,]+ → [\d,]+ tok  -[\d.]+%  \w+  .+  \d+% prose  —  session [\d,]+ saved$`)
+		`(?m)^caveman  [\d,]+ → [\d,]+ (tok|char)  -[\d.]+%  \w+  .+  \d+% prose  —  session [\d,]+ saved$`)
 	if !requestLine.MatchString(contents) {
 		t.Fatalf("request line does not match the contract in:\n%s", contents)
 	}
@@ -186,7 +188,7 @@ func TestTheLogCarriesTheSeparatorsTheContractNames(t *testing.T) {
 	if !billedLine.MatchString(contents) {
 		t.Fatalf("billed line does not match the contract in:\n%s", contents)
 	}
-	summaryLine := regexp.MustCompile(`(?m)^caveman  session  [\d,]+ tok saved across 1 request$`)
+	summaryLine := regexp.MustCompile(`(?m)^caveman  session  [\d,]+ (tok|char) saved across 1 request$`)
 	if !summaryLine.MatchString(contents) {
 		t.Fatalf("session summary does not match the contract in:\n%s", contents)
 	}
@@ -214,9 +216,9 @@ func TestTheLogGroupsThousandsInEnglish(t *testing.T) {
 // groupedCount is a token count with en-US grouping: 7,800 rather than 7800. It
 // is anchored to the fields that carry counts, since the node list has a comma
 // of its own that would otherwise pass for grouping.
-var groupedCount = regexp.MustCompile(`(?m)^caveman  \d{1,3}(,\d{3})+ → \d{1,3}(,\d{3})* tok  `)
+var groupedCount = regexp.MustCompile(`(?m)^caveman  \d{1,3}(,\d{3})+ → \d{1,3}(,\d{3})* (tok|char)  `)
 
-var groupedSummary = regexp.MustCompile(`(?m)^caveman  session  \d{1,3}(,\d{3})+ tok saved `)
+var groupedSummary = regexp.MustCompile(`(?m)^caveman  session  \d{1,3}(,\d{3})+ (tok|char) saved `)
 
 func assertGrouped(t *testing.T, log string) {
 	t.Helper()

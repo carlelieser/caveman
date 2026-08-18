@@ -127,3 +127,69 @@ func TestPipelineScopesLimitTheWalk(t *testing.T) {
 		t.Errorf("out-of-scope system node was rewritten to %q", texts[0])
 	}
 }
+
+// Counting is opt-in, so the default walk must leave the token totals alone
+// while still producing the character totals the report falls back on.
+func TestPipelineSkipsCountingUnlessAsked(t *testing.T) {
+	request := userRequest(textBlock(verbose, false), textBlock(verbose, true))
+	uncounted := RunPipeline(PipelineRequest{
+		Request:   request,
+		Level:     LevelModerate,
+		Scopes:    ir.AllScopes,
+		CacheMode: CacheIgnore,
+	})
+	if uncounted.Stats.TokensBefore != 0 || uncounted.Stats.TokensAfter != 0 {
+		t.Errorf("counted %d→%d tokens with counting off",
+			uncounted.Stats.TokensBefore, uncounted.Stats.TokensAfter)
+	}
+	if uncounted.Stats.Counted {
+		t.Error("stats claim a tokenizer ran with counting off")
+	}
+	if uncounted.Stats.CharsBefore == 0 || uncounted.Stats.CharsAfter >= uncounted.Stats.CharsBefore {
+		t.Errorf("character totals %d→%d do not show a saving",
+			uncounted.Stats.CharsBefore, uncounted.Stats.CharsAfter)
+	}
+
+	counted := RunPipeline(PipelineRequest{
+		Request:   request,
+		Level:     LevelModerate,
+		Scopes:    ir.AllScopes,
+		CacheMode: CacheIgnore,
+		Count:     true,
+	})
+	if !counted.Stats.Counted {
+		t.Error("stats do not record that a tokenizer ran")
+	}
+	if counted.Stats.TokensBefore == 0 || counted.Stats.TokensAfter >= counted.Stats.TokensBefore {
+		t.Errorf("token totals %d→%d do not show a saving",
+			counted.Stats.TokensBefore, counted.Stats.TokensAfter)
+	}
+	// Counting must not change what the compressor produces, only what is
+	// reported about it.
+	if counted.Stats.CharsBefore != uncounted.Stats.CharsBefore ||
+		counted.Stats.CharsAfter != uncounted.Stats.CharsAfter {
+		t.Errorf("counting changed the output: %d→%d counted, %d→%d not",
+			counted.Stats.CharsBefore, counted.Stats.CharsAfter,
+			uncounted.Stats.CharsBefore, uncounted.Stats.CharsAfter)
+	}
+}
+
+// A skipped node is charged to both sides, so counting it must not invent a
+// saving the cached prefix did not produce.
+func TestPipelineCountsSkippedNodesOnBothSides(t *testing.T) {
+	request := userRequest(textBlock(verbose, true), textBlock(verbose, false))
+	result := RunPipeline(PipelineRequest{
+		Request:   request,
+		Level:     LevelModerate,
+		Scopes:    ir.AllScopes,
+		CacheMode: CacheRespect,
+		Count:     true,
+	})
+	if result.Stats.NodesSkipped == 0 {
+		t.Fatal("no node was skipped, so this proves nothing")
+	}
+	if result.Stats.TokensBefore <= result.Stats.TokensAfter {
+		t.Errorf("token totals %d→%d do not show the tail's saving",
+			result.Stats.TokensBefore, result.Stats.TokensAfter)
+	}
+}

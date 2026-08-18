@@ -114,7 +114,7 @@ func (c *CLI) spawnServer(port int) (spawned, *exitError) {
 	return spawned{pid: pid, exited: exited}, nil
 }
 
-func (c *CLI) startServer(port int, baseURL string, level string) *exitError {
+func (c *CLI) startServer(port int, baseURL string, level string, count bool) *exitError {
 	switch probeHealth(baseURL) {
 	case HealthCaveman:
 		c.streams.say("caveman already running on %s", baseURL)
@@ -136,6 +136,7 @@ func (c *CLI) startServer(port int, baseURL string, level string) *exitError {
 	}
 	c.streams.say("caveman listening on %s", baseURL)
 	c.streams.say("level: %s", level)
+	c.streams.say("counting: %s", countLabel(count))
 	c.streams.say("logs: %s", c.paths.LogFile)
 	return nil
 }
@@ -207,10 +208,11 @@ func signalProcess(pid int, signal syscall.Signal) {
 	_ = process.Signal(signal)
 }
 
-func (c *CLI) reportStatus(port int, baseURL string, level string) *exitError {
+func (c *CLI) reportStatus(port int, baseURL string, level string, count bool) *exitError {
 	if isRunning(baseURL) {
 		c.streams.say("caveman is running on %s", baseURL)
 		c.streams.say("level: %s", level)
+		c.streams.say("counting: %s", countLabel(count))
 		if pid, alive := c.readPID(); alive {
 			c.streams.say("pid: %d", pid)
 		}

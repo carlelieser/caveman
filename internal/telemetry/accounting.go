@@ -31,19 +31,42 @@ type PipelineStats struct {
 	// since both are summed over the same node boundaries.
 	TokensBefore int
 	TokensAfter  int
+	// Counted records whether a tokenizer actually ran. Without it a zero token
+	// total is ambiguous: it could mean counting was off, or an empty request.
+	Counted bool
 }
 
+// TokenAccounting is one request's saving, in whichever unit was measured.
+// Counted records which: true means the token fields came from a real tokenizer
+// pass, false means counting was off and only the character fields are real.
+// Before/After/Saved carry the measured unit so readers need not branch.
 type TokenAccounting struct {
 	TokensBefore int
 	TokensAfter  int
-	TokensSaved  int
+	CharsBefore  int
+	CharsAfter   int
+	Before       int
+	After        int
+	Saved        int
 	Ratio        float64
+	Counted      bool
 	Level        policy.Level
+}
+
+// Unit names what Before, After and Saved are counted in, for reports that
+// print the figure next to its unit.
+func (a TokenAccounting) Unit() string {
+	if a.Counted {
+		return "tok"
+	}
+	return "char"
 }
 
 const (
 	HeaderTokensBefore = "X-Caveman-Tokens-Before"
 	HeaderTokensAfter  = "X-Caveman-Tokens-After"
+	HeaderCharsBefore  = "X-Caveman-Chars-Before"
+	HeaderCharsAfter   = "X-Caveman-Chars-After"
 	HeaderRatio        = "X-Caveman-Ratio"
 	HeaderLevel        = "X-Caveman-Level"
 )
@@ -62,13 +85,24 @@ func roundRatio(ratio float64) float64 {
 }
 
 func AccountFor(stats PipelineStats) TokenAccounting {
-	tokensBefore := stats.TokensBefore
-	tokensAfter := stats.TokensAfter
+	// Counting is opt-in, so token totals are zero when it was off. The
+	// character totals are always real, and both sides measure the same deleted
+	// words, so the ratio means the same thing either way.
+	counted := stats.Counted
+	before, after := stats.CharsBefore, stats.CharsAfter
+	if counted {
+		before, after = stats.TokensBefore, stats.TokensAfter
+	}
 	return TokenAccounting{
-		TokensBefore: tokensBefore,
-		TokensAfter:  tokensAfter,
-		TokensSaved:  tokensBefore - tokensAfter,
-		Ratio:        roundRatio(reductionRatio(tokensBefore, tokensAfter)),
+		TokensBefore: stats.TokensBefore,
+		TokensAfter:  stats.TokensAfter,
+		CharsBefore:  stats.CharsBefore,
+		CharsAfter:   stats.CharsAfter,
+		Before:       before,
+		After:        after,
+		Saved:        before - after,
+		Ratio:        roundRatio(reductionRatio(before, after)),
+		Counted:      counted,
 		Level:        stats.Level,
 	}
 }
@@ -77,8 +111,14 @@ func AccountFor(stats PipelineStats) TokenAccounting {
 // attached even when a request fails upstream, so a compression-induced 4xx
 // stays attributable to the ratio that caused it.
 func ApplyAccountingHeaders(headers http.Header, accounting TokenAccounting) {
-	headers.Set(HeaderTokensBefore, strconv.Itoa(accounting.TokensBefore))
-	headers.Set(HeaderTokensAfter, strconv.Itoa(accounting.TokensAfter))
+	// Token headers appear only when a tokenizer produced them, so a zero is
+	// never mistaken for a measured count. Character headers are always real.
+	if accounting.Counted {
+		headers.Set(HeaderTokensBefore, strconv.Itoa(accounting.TokensBefore))
+		headers.Set(HeaderTokensAfter, strconv.Itoa(accounting.TokensAfter))
+	}
+	headers.Set(HeaderCharsBefore, strconv.Itoa(accounting.CharsBefore))
+	headers.Set(HeaderCharsAfter, strconv.Itoa(accounting.CharsAfter))
 	headers.Set(HeaderRatio, strconv.FormatFloat(accounting.Ratio, 'f', 4, 64))
 	headers.Set(HeaderLevel, string(accounting.Level))
 }

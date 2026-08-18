@@ -32,12 +32,14 @@ func upperStage(request ir.Request, p policy.Policy) server.StageResult {
 			scopes = append(scopes, scope)
 		}
 	}
-	stats := telemetry.PipelineStats{Level: p.Level}
+	stats := telemetry.PipelineStats{Level: p.Level, Counted: p.Count}
 	for _, node := range ir.CollectTextNodes(request, ir.AllScopes) {
 		stats.NodesSeen++
 		stats.CharsBefore += len(node.Text)
 		stats.CharsProse += len(node.Text)
-		stats.TokensBefore += tokens.Count(node.Text)
+		if p.Count {
+			stats.TokensBefore += tokens.Count(node.Text)
+		}
 	}
 	compressed := ir.MapTextNodes(request, scopes, func(node ir.TextNode) string {
 		stats.NodesCompressed++
@@ -45,7 +47,9 @@ func upperStage(request ir.Request, p policy.Policy) server.StageResult {
 	})
 	for _, node := range ir.CollectTextNodes(compressed, ir.AllScopes) {
 		stats.CharsAfter += len(node.Text)
-		stats.TokensAfter += tokens.Count(node.Text)
+		if p.Count {
+			stats.TokensAfter += tokens.Count(node.Text)
+		}
 	}
 	return server.StageResult{Request: compressed, Stats: &stats}
 }
@@ -118,7 +122,12 @@ func TestAccountingHeadersReportTheCompression(t *testing.T) {
 	upstream := newFakeUpstream(t)
 	handler := compressionHandler(t, upstream)
 
-	recorder := post(t, handler, "/v1/messages", map[string]string{"X-Caveman-Compress": "moderate"}, compressibleBody)
+	// Counting is opt-in, so this asks for it: without the header the response
+	// carries character figures and no token headers at all.
+	recorder := post(t, handler, "/v1/messages", map[string]string{
+		"X-Caveman-Compress": "moderate",
+		"X-Caveman-Count":    "on",
+	}, compressibleBody)
 
 	before, _ := strconv.Atoi(recorder.Header().Get(telemetry.HeaderTokensBefore))
 	after, _ := strconv.Atoi(recorder.Header().Get(telemetry.HeaderTokensAfter))
@@ -214,7 +223,9 @@ func TestSavingsAreLoggedOnlyWhenCompressionRan(t *testing.T) {
 func compressionLines(lines []string) int {
 	count := 0
 	for _, line := range lines {
-		if strings.Contains(line, "tok") && !strings.Contains(line, "billed") {
+		// The unit depends on whether counting was on, so match either.
+		if (strings.Contains(line, " tok ") || strings.Contains(line, " char ")) &&
+			!strings.Contains(line, "billed") {
 			count++
 		}
 	}

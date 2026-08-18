@@ -40,6 +40,12 @@ type PipelineRequest struct {
 	Level     Level
 	Scopes    []ir.Scope
 	CacheMode CacheMode
+	// Count asks for real token counts, which cost a BPE pass over every node's
+	// text on both sides of the compression. It is off by default because the
+	// cost follows conversation size rather than turn size: a chat re-sends its
+	// history every turn, so every turn re-tokenizes the whole prefix. Off, the
+	// token totals stay zero and the character totals carry the reporting.
+	Count bool
 }
 
 const defaultRole = RoleUser
@@ -85,7 +91,18 @@ func cachedThroughIndex(request PipelineRequest) int {
 // skipNode returns a node inside the cached prefix verbatim, but still counts it.
 // It is classified anyway, so the prose share covers the whole request rather
 // than only the compressible tail.
-func skipNode(node ir.TextNode, stats *telemetry.PipelineStats) string {
+// countTokens is the one place the walk reaches the tokenizer. When counting is
+// off it returns zero without calling Count, which also leaves the BPE tables
+// unloaded: tokens.Count loads them on first use, so a run that never counts
+// never pays for them.
+func countTokens(text string, count bool) int {
+	if !count {
+		return 0
+	}
+	return tokens.Count(text)
+}
+
+func skipNode(node ir.TextNode, count bool, stats *telemetry.PipelineStats) string {
 	stats.NodesSeen++
 	stats.NodesSkipped++
 	stats.CharsBefore += len(node.Text)
@@ -93,7 +110,7 @@ func skipNode(node ir.TextNode, stats *telemetry.PipelineStats) string {
 	stats.CharsProse += ProseLength(node.Text)
 	// An untouched node is counted once and charged to both sides, so it adds
 	// nothing to the saving without dropping out of the totals.
-	nodeTokens := tokens.Count(node.Text)
+	nodeTokens := countTokens(node.Text, count)
 	stats.TokensBefore += nodeTokens
 	stats.TokensAfter += nodeTokens
 	return node.Text
@@ -124,8 +141,8 @@ func compressNode(node ir.TextNode, request PipelineRequest, stats *telemetry.Pi
 	stats.CharsBefore += result.Stats.CharsIn
 	stats.CharsAfter += len(text)
 	stats.CharsProse += result.Stats.CharsProse
-	stats.TokensBefore += tokens.Count(node.Text)
-	stats.TokensAfter += tokens.Count(text)
+	stats.TokensBefore += countTokens(node.Text, request.Count)
+	stats.TokensAfter += countTokens(text, request.Count)
 	if !emptied && !result.Stats.IsUncompressed {
 		stats.NodesCompressed++
 	}
@@ -144,13 +161,13 @@ func compressNode(node ir.TextNode, request PipelineRequest, stats *telemetry.Pi
 // one write of the segment it lies in, which a growing conversation was going to
 // write anyway.
 func RunPipeline(request PipelineRequest) PipelineResult {
-	stats := telemetry.PipelineStats{Level: request.Level}
+	stats := telemetry.PipelineStats{Level: request.Level, Counted: request.Count}
 	cachedThrough := cachedThroughIndex(request)
 	index := -1
 	compressed := ir.MapTextNodes(request.Request, request.Scopes, func(node ir.TextNode) string {
 		index++
 		if index <= cachedThrough {
-			return skipNode(node, &stats)
+			return skipNode(node, request.Count, &stats)
 		}
 		return compressNode(node, request, &stats)
 	})

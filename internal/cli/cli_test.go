@@ -149,7 +149,7 @@ printf "url=%s args=%s\n" "$CAVEMAN_BASE_URL" "$*"
 `
 
 const reporterScript = `#!/bin/sh
-printf "level=%s args=%s header=%s\n" "$CAVEMAN_LEVEL" "$*" "$CAVEMAN_COMPRESS_HEADER"
+printf "level=%s args=%s header=%s count=%s count_header=%s\n" "$CAVEMAN_LEVEL" "$*" "$CAVEMAN_COMPRESS_HEADER" "$CAVEMAN_COUNT" "$CAVEMAN_COUNT_HEADER"
 `
 
 func TestPassesTheBaseURLAndEveryArgumentToTheClient(t *testing.T) {
@@ -256,4 +256,40 @@ func TestVersionReportsTheBuild(t *testing.T) {
 		requireCode(t, result, 0)
 		requireContains(t, result.stdout, "caveman", "dev")
 	}
+}
+
+// Counting costs a tokenizer pass per request on top of compression, so it is
+// off unless asked for, and inherited the same way a level is.
+func TestCountingIsOffUnlessAskedFor(t *testing.T) {
+	harness, _ := levelHarness(t)
+	harness.run("up")
+	requireContains(t, harness.run("show").stdout, "count=off", "default counting")
+}
+
+func TestInheritsCountingGivenToUp(t *testing.T) {
+	harness, _ := levelHarness(t)
+	harness.run("up", "--count")
+	result := harness.run("show").stdout
+	requireContains(t, result, "count=on", "inherited counting")
+	requireContains(t, result, "count_header=X-Caveman-Count: on", "count header")
+}
+
+func TestClientOverridesTheStoredCountForThatLaunchOnly(t *testing.T) {
+	harness, _ := levelHarness(t)
+	harness.run("up", "--count")
+	requireContains(t, harness.run("show", "--no-count").stdout, "count=off", "override")
+	requireContains(t, harness.run("show").stdout, "count=on", "after override")
+}
+
+func TestReportsCountingInStatus(t *testing.T) {
+	harness, _ := levelHarness(t)
+	harness.run("up", "--count")
+	requireContains(t, harness.run("status").stdout, "counting: on", "status counting")
+}
+
+func TestKeepsTheCountFlagOutOfTheClientArguments(t *testing.T) {
+	harness, _ := levelHarness(t)
+	harness.run("up")
+	result := harness.run("show", "--count", "--resume", "-p", "hi there")
+	requireContains(t, result.stdout, "args=--resume -p hi there", "stripped flag")
 }

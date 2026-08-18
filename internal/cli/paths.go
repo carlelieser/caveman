@@ -13,12 +13,14 @@ type Paths struct {
 	LogFile   string
 	LevelFile string
 	ClientDir string
+	CountFile string
 }
 
 const (
 	pidFileName   = "caveman.pid"
 	logFileName   = "caveman.log"
 	levelFileName = "caveman.level"
+	countFileName = "caveman.count"
 )
 
 // resolveHome falls back to the directory holding the binary. The bash CLI
@@ -48,6 +50,7 @@ func NewPaths(lookup func(string) (string, bool), executable string) Paths {
 		PIDFile:   filepath.Join(runDir, pidFileName),
 		LogFile:   filepath.Join(runDir, logFileName),
 		LevelFile: filepath.Join(runDir, levelFileName),
+		CountFile: filepath.Join(runDir, countFileName),
 		ClientDir: clientDir,
 	}
 }

@@ -119,7 +119,7 @@ func (c *CLI) dispatch(argv []string) *exitError {
 		return c.measure(argv)
 	}
 
-	parsedArgs, failure := parseLevelFlag(argv)
+	parsedArgs, failure := parseFlags(argv)
 	if failure != nil {
 		return failure
 	}
@@ -134,7 +134,11 @@ func (c *CLI) dispatch(argv []string) *exitError {
 		if failure := c.paths.storeLevel(level); failure != nil {
 			return failure
 		}
-		return c.startServer(port, baseURL, level)
+		count := c.paths.resolveCount(parsedArgs.count)
+		if failure := c.paths.storeCount(count); failure != nil {
+			return failure
+		}
+		return c.startServer(port, baseURL, level, count)
 	case "down":
 		if _, _, failure := c.initPort(); failure != nil {
 			return failure
@@ -145,7 +149,7 @@ func (c *CLI) dispatch(argv []string) *exitError {
 		if failure != nil {
 			return failure
 		}
-		return c.reportStatus(port, baseURL, c.paths.resolveLevel(parsedArgs.level))
+		return c.reportStatus(port, baseURL, c.paths.resolveLevel(parsedArgs.level), c.paths.resolveCount(parsedArgs.count))
 	case "version", "--version", "-v":
 		c.streams.say("caveman %s", Version)
 		return nil
@@ -168,6 +172,7 @@ func (c *CLI) dispatch(argv []string) *exitError {
 		return c.launchClient(command, port, baseURL, launchContext{
 			BaseURL: baseURL,
 			Level:   c.paths.resolveLevel(parsedArgs.level),
+			Count:   c.paths.resolveCount(parsedArgs.count),
 			Args:    parsedArgs.args,
 		})
 	}

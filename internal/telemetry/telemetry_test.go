@@ -26,19 +26,22 @@ func statsFor(tokensBefore, tokensAfter int) telemetry.PipelineStats {
 		CharsProse:      tokensBefore * 4,
 		TokensBefore:    tokensBefore,
 		TokensAfter:     tokensAfter,
+		// These stats stand for a run with counting on, which is what makes the
+		// token fields the ones accounting reports.
+		Counted: true,
 	}
 }
 
 func TestTokenAccounting(t *testing.T) {
 	accounting := telemetry.AccountFor(statsFor(100, 60))
-	if accounting.TokensBefore != 100 || accounting.TokensAfter != 60 || accounting.TokensSaved != 40 {
+	if accounting.TokensBefore != 100 || accounting.TokensAfter != 60 || accounting.Saved != 40 {
 		t.Errorf("accounting = %+v", accounting)
 	}
-	if got := telemetry.AccountFor(statsFor(100, 100)).TokensSaved; got != 0 {
+	if got := telemetry.AccountFor(statsFor(100, 100)).Saved; got != 0 {
 		t.Errorf("tokens saved with nothing dropped = %d", got)
 	}
 	empty := telemetry.AccountFor(statsFor(0, 0))
-	if empty.TokensSaved != 0 || empty.Ratio != 0 {
+	if empty.Saved != 0 || empty.Ratio != 0 {
 		t.Errorf("empty request accounting = %+v", empty)
 	}
 }
@@ -381,5 +384,51 @@ func TestSinkHonoursTheSwitch(t *testing.T) {
 	sink("emitted")
 	if written.String() != "emitted\n" {
 		t.Errorf("wrote %q, want %q", written.String(), "emitted\n")
+	}
+}
+
+// With counting off the token fields are zero, so the report has to come off the
+// character totals instead — and say so in its unit.
+func TestAccountingFallsBackToCharacters(t *testing.T) {
+	stats := telemetry.PipelineStats{
+		Level:           policy.LevelModerate,
+		NodesSeen:       1,
+		NodesCompressed: 1,
+		CharsBefore:     400,
+		CharsAfter:      240,
+		CharsProse:      400,
+	}
+	accounting := telemetry.AccountFor(stats)
+	if accounting.Counted {
+		t.Error("accounting claims a tokenizer ran")
+	}
+	if accounting.Unit() != "char" {
+		t.Errorf("unit = %q, want char", accounting.Unit())
+	}
+	if accounting.Before != 400 || accounting.After != 240 || accounting.Saved != 160 {
+		t.Errorf("accounting = %+v", accounting)
+	}
+	if accounting.Ratio != 0.4 {
+		t.Errorf("ratio = %v, want 0.4", accounting.Ratio)
+	}
+}
+
+// A zero token count means "counting was off", so the token headers must not be
+// set at all rather than reporting a measured zero.
+func TestAccountingHeadersOmitTokensWhenNotCounted(t *testing.T) {
+	headers := http.Header{}
+	telemetry.ApplyAccountingHeaders(headers, telemetry.AccountFor(telemetry.PipelineStats{
+		Level:       policy.LevelModerate,
+		CharsBefore: 400,
+		CharsAfter:  240,
+	}))
+	if got := headers.Get(telemetry.HeaderTokensBefore); got != "" {
+		t.Errorf("token header set to %q with counting off", got)
+	}
+	if got := headers.Get(telemetry.HeaderCharsBefore); got != "400" {
+		t.Errorf("chars before header = %q", got)
+	}
+	if got := headers.Get(telemetry.HeaderCharsAfter); got != "240" {
+		t.Errorf("chars after header = %q", got)
 	}
 }
