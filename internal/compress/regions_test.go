@@ -46,6 +46,7 @@ func TestClassifyRegionsMatchesGolden(t *testing.T) {
 		writeGolden(t, "regions.json", cases)
 		return
 	}
+	reportMismatch(t, "regions.json", matched, len(cases))
 	t.Logf("regions.json: %d/%d nodes match exactly (%d prose, %d protected spans)",
 		matched, len(cases), prose, protectedCount)
 }

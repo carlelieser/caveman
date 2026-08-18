@@ -62,6 +62,7 @@ func TestCompressTextMatchesGolden(t *testing.T) {
 		writeGolden(t, "compression.json", cases)
 		return
 	}
+	reportMismatch(t, "compression.json", matched, len(cases))
 	t.Logf("compression.json: %d/%d cases match exactly", matched, len(cases))
 }
 

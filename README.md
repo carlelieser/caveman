@@ -172,3 +172,14 @@ testdata/golden/ the recorded corpus the tests gate against
 ```sh
 go test ./...
 ```
+
+Compression is gated against recorded output in `testdata/golden/`. A change
+there fails those gates by design, naming every case that moved. If the new
+output is correct, record it and review the diff as part of the change:
+
+```sh
+go test ./internal/compress/ -update
+```
+
+Inputs are never rewritten, and the property tests in `invariants_test.go` are
+not regenerable — a change that breaks one is wrong rather than new.

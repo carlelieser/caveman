@@ -143,6 +143,22 @@ func fieldNames(t *testing.T, data []byte) map[string]bool {
 	return found
 }
 
+// reportMismatch names the regeneration command on a failing gate. A diff here
+// is either a regression or an intended change, and the difference is not
+// something the test can tell — so it says how to record the new output rather
+// than leaving the reader to hand-edit JSON.
+func reportMismatch(t *testing.T, name string, matched, total int) {
+	t.Helper()
+	if matched == total {
+		return
+	}
+	t.Errorf("%s: %d/%d match\n"+
+		"if the new output is correct, record it with:\n"+
+		"  go test ./internal/compress/ -update\n"+
+		"then review the diff to testdata/golden/%s as part of the change",
+		name, matched, total, name)
+}
+
 func readGolden(t *testing.T, name string, into any) {
 	t.Helper()
 	data, err := os.ReadFile(goldenPath(name))
@@ -261,6 +277,7 @@ func TestClassifyWordsMatchesGolden(t *testing.T) {
 		writeGolden(t, "tagger.json", cases)
 		return
 	}
+	reportMismatch(t, "tagger.json", matched, len(cases))
 	t.Logf("tagger.json: %d/%d nodes match exactly", matched, len(cases))
 }
 
@@ -312,6 +329,7 @@ func TestClassifyWordsUnicode(t *testing.T) {
 		writeGolden(t, "unicode.json", cases)
 		return
 	}
+	reportMismatch(t, "unicode.json", matched, len(cases))
 	t.Logf("unicode.json: %d/%d cases match exactly", matched, len(cases))
 }
 
